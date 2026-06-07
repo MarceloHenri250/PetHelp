@@ -1,0 +1,124 @@
+import React from 'react';
+import { useNavigate } from 'react-router';
+import { Syringe, FileText, Calendar, User, LogOut, ArrowLeft } from 'lucide-react';
+import { useApp } from '../context/AppContext';
+
+export default function DashboardScreen() {
+  const navigate = useNavigate();
+  const { pet, user, logout } = useApp();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
+
+  if (!pet) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+        <div className="text-center">
+          <p className="text-gray-600 mb-4">No pet registered yet</p>
+          <button
+            onClick={() => navigate('/pet-registration')}
+            className="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-2xl transition-colors"
+          >
+            Add Your Pet
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const menuItems = [
+    {
+      icon: Syringe,
+      label: 'Vaccines',
+      path: '/vaccines',
+      color: 'bg-blue-500'
+    },
+    {
+      icon: FileText,
+      label: 'Medical History',
+      path: '/medical-history',
+      color: 'bg-purple-500'
+    },
+    {
+      icon: Calendar,
+      label: 'Appointments',
+      path: '/appointments',
+      color: 'bg-orange-500'
+    },
+    {
+      icon: User,
+      label: 'Profile',
+      path: '/profile',
+      color: 'bg-green-500'
+    }
+  ];
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-green-50 to-white pb-6">
+      {/* Header */}
+      <div className="bg-green-500 rounded-b-[40px] px-6 pt-12 pb-8 shadow-lg">
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h2 className="text-white/80">Welcome back,</h2>
+            <h1 className="text-white text-2xl">{user?.name}</h1>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 transition-colors"
+          >
+            <LogOut className="w-5 h-5 text-white" />
+          </button>
+        </div>
+
+        {/* Pet Profile Card */}
+        <div className="bg-white rounded-3xl p-6 shadow-xl">
+          <div className="flex items-center gap-4">
+            <img
+              src={pet.photo}
+              alt={pet.name}
+              className="w-24 h-24 rounded-full object-cover"
+            />
+            <div className="flex-1">
+              <h2 className="text-2xl text-gray-800 mb-2">{pet.name}</h2>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div>
+                  <p className="text-gray-500">Breed</p>
+                  <p className="text-gray-800">{pet.breed}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500">Age</p>
+                  <p className="text-gray-800">{pet.age}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500">Weight</p>
+                  <p className="text-gray-800">{pet.weight}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Navigation Menu */}
+      <div className="px-6 mt-8">
+        <h3 className="text-gray-700 text-lg mb-4">Quick Access</h3>
+        <div className="grid grid-cols-2 gap-4">
+          {menuItems.map((item) => (
+            <button
+              key={item.path}
+              onClick={() => navigate(item.path)}
+              className="bg-white rounded-3xl p-6 shadow-lg hover:shadow-xl transition-shadow flex flex-col items-center gap-3"
+            >
+              <div className={`${item.color} w-14 h-14 rounded-full flex items-center justify-center`}>
+                <item.icon className="w-7 h-7 text-white" />
+              </div>
+              <span className="text-gray-800">{item.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
