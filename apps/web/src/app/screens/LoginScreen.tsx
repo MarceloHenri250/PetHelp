@@ -89,7 +89,7 @@ export default function LoginScreen() {
           <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center mb-4">
             <PawPrint className="w-10 h-10 text-white" />
           </div>
-          <h1 className="text-3xl text-foreground mb-2">Pet Help</h1>
+          <h1 className="text-3xl text-foreground mb-2">PetHelp</h1>
           <p className="text-muted-foreground">Gerenciamento completo de cuidados com pets</p>
         </div>
 

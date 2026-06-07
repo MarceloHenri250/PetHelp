@@ -1,11 +1,11 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { Calendar, Syringe, FileText, Bell, LogOut, Link, PawPrint, Plus, AlertCircle, CheckCircle } from 'lucide-react';
+import { Calendar, Syringe, FileText, Bell, LogOut, Link, PawPrint, Plus, AlertCircle, CheckCircle, ChevronsUpDown } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 export default function OwnerDashboardScreen() {
   const navigate = useNavigate();
-  const { user, currentPet, appointments, vaccines, notifications, logout } = useApp();
+  const { user, currentPet, pets, appointments, vaccines, notifications, logout, setCurrentPet } = useApp();
 
   const upcomingAppointments = appointments
     .filter(a => a.status === 'scheduled')
@@ -20,6 +20,12 @@ export default function OwnerDashboardScreen() {
     navigate('/');
   };
 
+  useEffect(() => {
+    if (!currentPet && pets.length > 0) {
+      setCurrentPet(pets[0]);
+    }
+  }, [currentPet, pets, setCurrentPet]);
+
   if (!currentPet) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-6">
@@ -30,7 +36,7 @@ export default function OwnerDashboardScreen() {
           <h2 className="text-2xl text-foreground mb-2">No Pet Registered</h2>
           <p className="text-muted-foreground mb-6">Please register a pet to continue</p>
           <button
-            onClick={() => navigate('/pet-registration')}
+            onClick={() => navigate('/pet-registration', { state: { mode: 'create' } })}
             className="bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-2xl transition-colors"
           >
             Register Pet
@@ -50,7 +56,7 @@ export default function OwnerDashboardScreen() {
                 <PawPrint className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-xl text-foreground">Pet Help</h1>
+                <h1 className="text-xl text-foreground">PetHelp</h1>
                 <p className="text-sm text-muted-foreground">{user?.name}</p>
               </div>
             </div>
@@ -78,6 +84,47 @@ export default function OwnerDashboardScreen() {
       </div>
 
       <div className="max-w-4xl mx-auto px-6 py-8">
+        <div className="bg-card rounded-3xl shadow-lg p-6 mb-6 border border-border">
+          <div className="flex items-center justify-between gap-4 mb-4">
+            <div>
+              <h2 className="text-xl text-foreground">Active Pet</h2>
+              <p className="text-sm text-muted-foreground">Change the pet in focus from here</p>
+            </div>
+            <button
+              onClick={() => navigate('/pet-registration', { state: { mode: 'create' } })}
+              className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-2xl transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              New Pet
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {pets.map((pet) => (
+              <button
+                key={pet.id}
+                onClick={() => setCurrentPet(pet)}
+                className={`flex items-center gap-3 rounded-2xl border p-3 text-left transition-colors ${
+                  currentPet?.id === pet.id
+                    ? 'border-primary bg-primary/10'
+                    : 'border-border bg-muted hover:bg-muted/70'
+                }`}
+              >
+                <img
+                  src={pet.photo}
+                  alt={pet.name}
+                  className="w-12 h-12 rounded-xl object-cover border border-border"
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-foreground truncate">{pet.name}</p>
+                  <p className="text-xs text-muted-foreground truncate">{pet.breed}</p>
+                </div>
+                {currentPet?.id === pet.id && <ChevronsUpDown className="w-4 h-4 text-primary" />}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="bg-card rounded-3xl shadow-lg p-6 mb-6 border border-border">
           <div className="flex items-start gap-4">
             <img
@@ -193,6 +240,23 @@ export default function OwnerDashboardScreen() {
             </div>
             <h3 className="text-lg text-foreground mb-1">Link to Clinic</h3>
             <p className="text-sm text-muted-foreground">Connect with your vet</p>
+          </button>
+        </div>
+
+        <div className="flex flex-wrap gap-3 mb-8">
+          <button
+            onClick={() => navigate('/pet-registration', { state: { mode: 'create' } })}
+            className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-5 py-3 rounded-2xl transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Add New Pet
+          </button>
+          <button
+            onClick={() => navigate('/pet-profile')}
+            className="inline-flex items-center gap-2 bg-card hover:bg-muted border border-border px-5 py-3 rounded-2xl transition-colors text-foreground"
+          >
+            <PawPrint className="w-4 h-4" />
+            Open Current Pet Profile
           </button>
         </div>
 

@@ -6,11 +6,11 @@ Aplicação web em React com Vite.
 
 ```bash
 pnpm install
-pnpm --filter @pet-care/web dev
+pnpm --filter @pet-help/web dev
 ```
 
 ## Build
 
 ```bash
-pnpm --filter @pet-care/web build
+pnpm --filter @pet-help/web build
 ```

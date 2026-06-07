@@ -90,7 +90,7 @@ export default function AppointmentsScreen() {
                     value={clinicName}
                     onChange={(e) => setClinicName(e.target.value)}
                     className="w-full pl-10 pr-4 py-3 bg-input border-2 border-border rounded-xl focus:border-primary focus:outline-none transition-colors text-foreground"
-                    placeholder="Pet Care Clinic"
+                    placeholder="PetHelp Clinic"
                     required
                   />
                 </div>

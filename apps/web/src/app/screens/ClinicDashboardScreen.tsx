@@ -40,7 +40,7 @@ export default function ClinicDashboardScreen() {
                 <Building2 className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-xl text-foreground">{user?.clinicName || 'Pet Help'}</h1>
+                <h1 className="text-xl text-foreground">{user?.clinicName || 'PetHelp'}</h1>
                 <p className="text-sm text-muted-foreground">Clinic Dashboard</p>
               </div>
             </div>

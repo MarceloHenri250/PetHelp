@@ -21,3 +21,6 @@ pnpm-debug.log*
 Thumbs.db
 *.swp
 *.swo
+
+# IDE files
+/Guias/

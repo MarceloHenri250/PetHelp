@@ -6,7 +6,7 @@ Conteúdo do README original do repositório remoto `PetHelp`.
 
 ## Sobre este repositório (mesclagem com o projeto local)
 
-Este repositório contém a interface do usuário do Pet Care Management App. O conteúdo abaixo corresponde aos READMEs locais do projeto dentro deste monorepo.
+Este repositório contém a interface do usuário do PetHelp Management App. O conteúdo abaixo corresponde aos READMEs locais do projeto dentro deste monorepo.
 
 ### Web App
 
@@ -16,13 +16,13 @@ Rodar localmente:
 
 ```bash
 pnpm install
-pnpm --filter @pet-care/web dev
+pnpm --filter @pet-help/web dev
 ```
 
 Build:
 
 ```bash
-pnpm --filter @pet-care/web build
+pnpm --filter @pet-help/web build
 ```
 
 ### Mobile App

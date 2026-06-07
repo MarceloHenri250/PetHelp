@@ -46,7 +46,7 @@ export default function RegisterScreen() {
           <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center mb-4">
             <PawPrint className="w-10 h-10 text-white" />
           </div>
-          <h1 className="text-3xl text-foreground mb-2">Pet Help</h1>
+          <h1 className="text-3xl text-foreground mb-2">PetHelp</h1>
           <p className="text-muted-foreground">Crie sua conta</p>
         </div>
 
@@ -115,7 +115,7 @@ export default function RegisterScreen() {
                     value={clinicName}
                     onChange={(e) => setClinicName(e.target.value)}
                     className="w-full pl-12 pr-4 py-3 bg-input border-2 border-border rounded-2xl focus:border-primary focus:outline-none transition-colors text-foreground"
-                    placeholder="Pet Care Clinic"
+                    placeholder="PetHelp Clinic"
                     required
                   />
                 </div>

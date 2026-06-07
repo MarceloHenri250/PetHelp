@@ -5,7 +5,7 @@ import { useApp } from '../context/AppContext';
 
 export default function PetProfileScreen() {
   const navigate = useNavigate();
-  const { user, currentPet, medicalRecords, vaccines } = useApp();
+  const { user, currentPet, medicalRecords, vaccines, deletePet } = useApp();
 
   if (!currentPet) {
     return (
@@ -55,9 +55,28 @@ export default function PetProfileScreen() {
                   <p className="text-xl text-muted-foreground">{currentPet.breed}</p>
                 </div>
                 {user?.userType === 'owner' && (
-                  <button className="text-primary hover:text-primary/80 transition-colors">
-                    <Edit className="w-5 h-5" />
-                  </button>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => navigate('/pet-registration', { state: { mode: 'edit' } })}
+                      className="text-primary hover:text-primary/80 transition-colors"
+                    >
+                      <Edit className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (!currentPet) return;
+                        try {
+                          await deletePet(currentPet.id);
+                          navigate(user?.userType === 'owner' ? '/owner-dashboard' : '/clinic-dashboard');
+                        } catch (err) {
+                          console.error('deletePet error', err);
+                        }
+                      }}
+                      className="text-destructive hover:text-destructive/80 transition-colors"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 )}
               </div>
               <div className="grid grid-cols-2 gap-6">
