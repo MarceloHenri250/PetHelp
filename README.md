@@ -1,10 +1,6 @@
 # PetHelp
 
-Conteúdo do README original do repositório remoto `PetHelp`.
-
----
-
-## Sobre este repositório (mesclagem com o projeto local)
+## Sobre este repositório 
 
 Este repositório contém a interface do usuário do PetHelp Management App. O conteúdo abaixo corresponde aos READMEs locais do projeto dentro deste monorepo.
 
@@ -33,4 +29,3 @@ Status: Ainda não inicializada. Quando for criada, deve viver em `apps/mobile`.
 
 ---
 
-> README mesclado automaticamente: contém o README remoto (`PetHelp`) e um resumo dos READMEs locais.
