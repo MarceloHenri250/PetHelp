@@ -5,9 +5,10 @@ export type UserType = 'owner' | 'clinic';
 interface Pet {
   id: string;
   name: string;
+  species: string;
   age: string;
-  breed: string;
-  weight: string;
+  breed?: string;
+  weight?: string;
   photo: string;
   ownerId: string;
   allergies?: string[];

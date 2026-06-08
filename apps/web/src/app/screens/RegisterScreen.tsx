@@ -54,7 +54,7 @@ export default function RegisterScreen() {
           <h2 className="text-2xl text-foreground mb-6">Cadastrar</h2>
 
           <div className="mb-6">
-            <label className="block text-foreground mb-3">Cadastrar como</label>
+            <label className="block text-foreground mb-3">Cadastrar como <span className="text-red-500">*</span></label>
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
@@ -85,7 +85,7 @@ export default function RegisterScreen() {
 
           <div className="mb-4">
             <label htmlFor="name" className="block text-foreground mb-2">
-              {userType === 'clinic' ? 'Nome de contato' : 'Nome completo'}
+              {userType === 'clinic' ? 'Nome de contato' : 'Nome completo'} <span className="text-red-500">*</span>
             </label>
             <div className="relative">
               <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -105,7 +105,7 @@ export default function RegisterScreen() {
             <>
               <div className="mb-4">
                 <label htmlFor="clinicName" className="block text-foreground mb-2">
-                  Nome da clínica
+                  Nome da clínica <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -159,7 +159,7 @@ export default function RegisterScreen() {
 
           <div className="mb-4">
             <label htmlFor="email" className="block text-foreground mb-2">
-              E-mail
+              E-mail <span className="text-red-500">*</span>
             </label>
             <div className="relative">
               <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -177,7 +177,7 @@ export default function RegisterScreen() {
 
           <div className="mb-4">
             <label htmlFor="password" className="block text-foreground mb-2">
-              Senha
+              Senha <span className="text-red-500">*</span>
             </label>
             <div className="relative">
               <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -195,7 +195,7 @@ export default function RegisterScreen() {
 
           <div className="mb-6">
             <label htmlFor="confirmPassword" className="block text-foreground mb-2">
-              Confirmar senha
+              Confirmar senha <span className="text-red-500">*</span>
             </label>
             <div className="relative">
               <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />

@@ -52,7 +52,7 @@ export default function PetProfileScreen() {
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <h1 className="text-3xl text-foreground mb-2">{currentPet.name}</h1>
-                  <p className="text-xl text-muted-foreground">{currentPet.breed}</p>
+                  <p className="text-xl text-muted-foreground">{currentPet.species ? `${currentPet.species} - ` : ''}{currentPet.breed}</p>
                 </div>
                 {user?.userType === 'owner' && (
                   <div className="flex gap-3">
@@ -89,45 +89,35 @@ export default function PetProfileScreen() {
                   <p className="text-lg text-foreground">{currentPet.weight}</p>
                 </div>
               </div>
+
+              {((currentPet.allergies && currentPet.allergies.length > 0) || (currentPet.conditions && currentPet.conditions.length > 0)) && (
+                <div className="mt-6 pt-6 border-t border-border space-y-4">
+                  {currentPet.allergies && currentPet.allergies.length > 0 && (
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-2 flex items-center gap-1">
+                        <AlertCircle className="w-4 h-4 text-primary" /> Allergies
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {currentPet.allergies.map((allergy, i) => (
+                          <span key={i} className="text-sm bg-primary/10 text-primary px-3 py-1 rounded-full">{allergy}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {currentPet.conditions && currentPet.conditions.length > 0 && (
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-2">Conditions</p>
+                      <div className="flex flex-wrap gap-2">
+                        {currentPet.conditions.map((condition, i) => (
+                          <span key={i} className="text-sm bg-muted text-foreground px-3 py-1 rounded-full border border-border">{condition}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
-
-          {currentPet.allergies && currentPet.allergies.length > 0 && (
-            <div className="bg-primary/10 border border-primary rounded-2xl p-4 mb-4">
-              <div className="flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-primary mt-0.5" />
-                <div className="flex-1">
-                  <h3 className="text-foreground mb-2">Allergies</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {currentPet.allergies.map((allergy, index) => (
-                      <span
-                        key={index}
-                        className="bg-primary/20 text-primary px-3 py-1 rounded-full text-sm"
-                      >
-                        {allergy}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {currentPet.conditions && currentPet.conditions.length > 0 && (
-            <div className="bg-muted rounded-2xl p-4">
-              <h3 className="text-foreground mb-2">Medical Conditions</h3>
-              <div className="flex flex-wrap gap-2">
-                {currentPet.conditions.map((condition, index) => (
-                  <span
-                    key={index}
-                    className="bg-card border border-border text-foreground px-3 py-1 rounded-full text-sm"
-                  >
-                    {condition}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">

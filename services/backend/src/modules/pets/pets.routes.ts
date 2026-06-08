@@ -10,14 +10,13 @@ type PetRow = RowDataPacket & {
   owner_id: string;
   linked_clinic_id: string | null;
   name: string;
-  species: string | null;
-  breed: string;
+  species: string;
+  breed: string | null;
   age: string;
-  weight: string;
+  weight: string | null;
   photo: string | null;
   allergies: string | null;
   conditions: string | null;
-  initial_health_history: string | null;
   created_at: Date;
   updated_at: Date;
 };
@@ -34,7 +33,6 @@ const petSelectFields = `
   photo,
   allergies,
   conditions,
-  initial_health_history AS initialHealthHistory,
   created_at AS createdAt,
   updated_at AS updatedAt
 `;
@@ -55,22 +53,30 @@ function parseNullableJson(value: unknown): string | null {
   return JSON.stringify(value);
 }
 
+function parseSafeJson(value: any) {
+  if (typeof value !== 'string') return value || null;
+  try {
+    return JSON.parse(value);
+  } catch (e) {
+    return value;
+  }
+}
+
 function normalizePet(row: PetRow) {
   return {
     id: row.id,
-    ownerId: row.owner_id,
-    linkedClinicId: row.linked_clinic_id,
+    ownerId: row.ownerId || row.owner_id,
+    linkedClinicId: row.linkedClinicId || row.linked_clinic_id,
     name: row.name,
     species: row.species,
     breed: row.breed,
     age: row.age,
     weight: row.weight,
     photo: row.photo,
-    allergies: row.allergies ? JSON.parse(row.allergies) : null,
-    conditions: row.conditions ? JSON.parse(row.conditions) : null,
-    initialHealthHistory: row.initial_health_history,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    allergies: parseSafeJson(row.allergies),
+    conditions: parseSafeJson(row.conditions),
+    createdAt: row.createdAt || row.created_at,
+    updatedAt: row.updatedAt || row.updated_at,
   };
 }
 
@@ -151,23 +157,22 @@ petsRouter.post('/', async (req: AuthRequest, res, next) => {
       ownerId: bodyOwnerId,
       name,
       species,
-      breed,
+      breed = null,
       age,
-      weight,
+      weight = null,
       photo = null,
       linkedClinicId = null,
       allergies = null,
       conditions = null,
-      initialHealthHistory = null,
     } = req.body ?? {};
 
     const user = req.user;
     // determine ownerId: owners create their own pets; clinics must provide ownerId
     const ownerId = user.userType === 'owner' ? user.id : bodyOwnerId;
 
-    if (!ownerId || !name || !breed || !age || !weight) {
+    if (!ownerId || !name || !species || !age) {
       res.status(400).json({
-        message: 'ownerId, name, breed, age and weight are required',
+        message: 'ownerId, name, species, and age are required',
       });
       return;
     }
@@ -186,23 +191,21 @@ petsRouter.post('/', async (req: AuthRequest, res, next) => {
           weight,
           photo,
           allergies,
-          conditions,
-          initial_health_history
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          conditions
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       [
         id,
         ownerId,
         linkedClinicId,
         name,
-        species ?? null,
+        species,
         breed,
         age,
         weight,
         photo,
         parseNullableJson(allergies),
         parseNullableJson(conditions),
-        initialHealthHistory,
       ]
     );
 
@@ -229,7 +232,6 @@ petsRouter.patch('/:id', async (req: AuthRequest, res, next) => {
       'photo',
       'allergies',
       'conditions',
-      'initialHealthHistory',
     ] as const;
 
     const assignments: string[] = [];
@@ -251,7 +253,6 @@ petsRouter.patch('/:id', async (req: AuthRequest, res, next) => {
         photo: 'photo',
         allergies: 'allergies',
         conditions: 'conditions',
-        initialHealthHistory: 'initial_health_history',
       };
 
       assignments.push(`${columnMap[field]} = ?`);

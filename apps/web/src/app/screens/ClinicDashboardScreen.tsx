@@ -145,7 +145,7 @@ export default function ClinicDashboardScreen() {
                     />
                     <div className="flex-1 min-w-0">
                       <h4 className="text-foreground truncate">{pet.name}</h4>
-                      <p className="text-sm text-muted-foreground truncate">{pet.breed}</p>
+                      <p className="text-sm text-muted-foreground truncate">{pet.species ? `${pet.species} - ` : ''}{pet.breed}</p>
                       <div className="flex gap-3 mt-2">
                         <p className="text-xs text-muted-foreground">{pet.age}</p>
                         <p className="text-xs text-muted-foreground">{pet.weight}</p>

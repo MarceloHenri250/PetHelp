@@ -117,7 +117,7 @@ export default function OwnerDashboardScreen() {
                 />
                 <div className="flex-1 min-w-0">
                   <p className="text-foreground truncate">{pet.name}</p>
-                  <p className="text-xs text-muted-foreground truncate">{pet.breed}</p>
+                  <p className="text-xs text-muted-foreground truncate">{pet.species ? `${pet.species} - ` : ''}{pet.breed}</p>
                 </div>
                 {currentPet?.id === pet.id && <ChevronsUpDown className="w-4 h-4 text-primary" />}
               </button>
@@ -136,7 +136,7 @@ export default function OwnerDashboardScreen() {
               <div className="flex justify-between items-start mb-2">
                 <div>
                   <h2 className="text-2xl text-foreground mb-1">{currentPet.name}</h2>
-                  <p className="text-muted-foreground">{currentPet.breed}</p>
+                  <p className="text-muted-foreground">{currentPet.species ? `${currentPet.species} - ` : ''}{currentPet.breed}</p>
                 </div>
                 <button
                   onClick={() => navigate('/pet-profile')}
@@ -155,6 +155,32 @@ export default function OwnerDashboardScreen() {
                   <p className="text-foreground">{currentPet.weight}</p>
                 </div>
               </div>
+              {((currentPet.allergies && currentPet.allergies.length > 0) || (currentPet.conditions && currentPet.conditions.length > 0)) && (
+                <div className="mt-4 pt-4 border-t border-border space-y-3">
+                  {currentPet.allergies && currentPet.allergies.length > 0 && (
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3 text-primary" /> Allergies
+                      </p>
+                      <div className="flex flex-wrap gap-1">
+                        {currentPet.allergies.map((allergy, i) => (
+                          <span key={i} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">{allergy}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {currentPet.conditions && currentPet.conditions.length > 0 && (
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Conditions</p>
+                      <div className="flex flex-wrap gap-1">
+                        {currentPet.conditions.map((condition, i) => (
+                          <span key={i} className="text-xs bg-muted text-foreground px-2 py-0.5 rounded-full border border-border">{condition}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
