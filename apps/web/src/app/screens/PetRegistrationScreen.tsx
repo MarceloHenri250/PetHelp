@@ -234,24 +234,3 @@ export default function PetRegistrationScreen() {
     </div>
   );
 }
-        <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-primary hover:bg-primary/90 text-white py-4 rounded-2xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? 'Saving...' : isEditing ? 'Update Pet' : 'Save Pet'}
-          </button>
-        </form>
-      </div>
-    </div>
-  );
-}
-abled:cursor-not-allowed"
-          >
-            {loading ? 'Saving...' : isEditing ? 'Update Pet' : 'Save Pet'}
-          </button>
-        </form>
-      </div>
-    </div>
-  );
-}

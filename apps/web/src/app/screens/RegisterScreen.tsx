@@ -95,7 +95,7 @@ export default function RegisterScreen() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="w-full pl-12 pr-4 py-3 bg-input border-2 border-border rounded-2xl focus:border-primary focus:outline-none transition-colors text-foreground"
-                placeholder={userType === 'clinic' ? 'Dr. John Doe' : 'John Doe'}
+                placeholder={userType === 'clinic' ? 'Dr. João Silva' : 'João Silva'}
                 required
               />
             </div>
@@ -115,7 +115,7 @@ export default function RegisterScreen() {
                     value={clinicName}
                     onChange={(e) => setClinicName(e.target.value)}
                     className="w-full pl-12 pr-4 py-3 bg-input border-2 border-border rounded-2xl focus:border-primary focus:outline-none transition-colors text-foreground"
-                    placeholder="PetHelp Clinic"
+                    placeholder="Clínica PetHelp"
                     required
                   />
                 </div>
@@ -133,7 +133,7 @@ export default function RegisterScreen() {
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     className="w-full pl-12 pr-4 py-3 bg-input border-2 border-border rounded-2xl focus:border-primary focus:outline-none transition-colors text-foreground"
-                    placeholder="(555) 123-4567"
+                    placeholder="(11) 99999-9999"
                   />
                 </div>
               </div>
@@ -150,7 +150,7 @@ export default function RegisterScreen() {
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
                     className="w-full pl-12 pr-4 py-3 bg-input border-2 border-border rounded-2xl focus:border-primary focus:outline-none transition-colors text-foreground"
-                    placeholder="123 Main St, City"
+                    placeholder="Rua Principal, 123 - Cidade"
                   />
                 </div>
               </div>
@@ -169,7 +169,7 @@ export default function RegisterScreen() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full pl-12 pr-4 py-3 bg-input border-2 border-border rounded-2xl focus:border-primary focus:outline-none transition-colors text-foreground"
-                placeholder="your@email.com"
+                placeholder="seu@email.com"
                 required
               />
             </div>
