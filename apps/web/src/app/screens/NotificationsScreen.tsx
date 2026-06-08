@@ -37,24 +37,24 @@ export default function NotificationsScreen() {
             className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
-            <span>Back</span>
+            <span>Voltar</span>
           </button>
         </div>
       </div>
 
       <div className="max-w-4xl mx-auto px-6 py-8">
-        <h1 className="text-3xl text-foreground mb-8">Notifications</h1>
+        <h1 className="text-3xl text-foreground mb-8">Notificações</h1>
 
         {userNotifications.length === 0 ? (
           <div className="text-center py-16">
             <Bell className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-50" />
-            <p className="text-muted-foreground">No notifications yet</p>
+            <p className="text-muted-foreground">Nenhuma notificação por enquanto</p>
           </div>
         ) : (
           <>
             {unread.length > 0 && (
               <div className="bg-card rounded-3xl shadow-lg p-6 mb-6 border border-border">
-                <h2 className="text-xl text-foreground mb-4">New</h2>
+                <h2 className="text-xl text-foreground mb-4">Novas</h2>
                 <div className="space-y-3">
                   {unread.map(notification => (
                     <button
@@ -80,7 +80,7 @@ export default function NotificationsScreen() {
 
             {read.length > 0 && (
               <div className="bg-card rounded-3xl shadow-lg p-6 border border-border">
-                <h2 className="text-xl text-foreground mb-4">Earlier</h2>
+                <h2 className="text-xl text-foreground mb-4">Anteriores</h2>
                 <div className="space-y-3">
                   {read.map(notification => (
                     <div

@@ -41,12 +41,13 @@ export default function ClinicDashboardScreen() {
               </div>
               <div>
                 <h1 className="text-xl text-foreground">{user?.clinicName || 'PetHelp'}</h1>
-                <p className="text-sm text-muted-foreground">Clinic Dashboard</p>
+                <p className="text-sm text-muted-foreground">Painel de Controlo da Clínica</p>
               </div>
             </div>
             <button
               onClick={handleLogout}
               className="p-2 hover:bg-muted rounded-xl transition-colors"
+              title="Sair"
             >
               <LogOut className="w-6 h-6 text-foreground" />
             </button>
@@ -63,7 +64,7 @@ export default function ClinicDashboardScreen() {
               </div>
               <div>
                 <p className="text-2xl text-foreground">{pets.length}</p>
-                <p className="text-sm text-muted-foreground">Registered Pets</p>
+                <p className="text-sm text-muted-foreground">Pets Cadastrados</p>
               </div>
             </div>
           </div>
@@ -75,7 +76,7 @@ export default function ClinicDashboardScreen() {
               </div>
               <div>
                 <p className="text-2xl text-foreground">{todayAppointments.length}</p>
-                <p className="text-sm text-muted-foreground">Today's Appointments</p>
+                <p className="text-sm text-muted-foreground">Consultas de Hoje</p>
               </div>
             </div>
           </div>
@@ -89,8 +90,8 @@ export default function ClinicDashboardScreen() {
                 <Plus className="w-6 h-6 text-white" />
               </div>
               <div>
-                <p className="text-lg">New Appointment</p>
-                <p className="text-sm opacity-90">Schedule a visit</p>
+                <p className="text-lg">Nova Consulta</p>
+                <p className="text-sm opacity-90">Agendar uma visita</p>
               </div>
             </div>
           </button>
@@ -100,8 +101,8 @@ export default function ClinicDashboardScreen() {
           <div className="flex items-center gap-3 mb-4">
             <QrCode className="w-6 h-6 text-primary" />
             <div className="flex-1">
-              <h3 className="text-lg text-foreground">Clinic Connection Code</h3>
-              <p className="text-sm text-muted-foreground">Share this code with pet owners to connect</p>
+              <h3 className="text-lg text-foreground">Código de Conexão da Clínica</h3>
+              <p className="text-sm text-muted-foreground">Partilhe este código com os tutores para vincular os pets à clínica</p>
             </div>
           </div>
           <div className="bg-muted rounded-2xl p-4 text-center">
@@ -111,14 +112,14 @@ export default function ClinicDashboardScreen() {
 
         <div className="bg-card rounded-3xl shadow-lg p-6 border border-border">
           <div className="flex justify-between items-center mb-6">
-            <h3 className="text-xl text-foreground">Patient Records</h3>
+            <h3 className="text-xl text-foreground">Registros de Pacientes</h3>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search pets..."
+                placeholder="Buscar pets..."
                 className="pl-10 pr-4 py-2 bg-input border border-border rounded-xl focus:border-primary focus:outline-none transition-colors text-foreground w-64"
               />
             </div>
@@ -127,7 +128,7 @@ export default function ClinicDashboardScreen() {
           {filteredPets.length === 0 ? (
             <div className="text-center py-12">
               <PawPrint className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-50" />
-              <p className="text-muted-foreground">No pets found</p>
+              <p className="text-muted-foreground">Nenhum pet encontrado</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -161,12 +162,12 @@ export default function ClinicDashboardScreen() {
         {todayAppointments.length > 0 && (
           <div className="bg-card rounded-3xl shadow-lg p-6 mt-6 border border-border">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl text-foreground">Today's Schedule</h3>
+              <h3 className="text-xl text-foreground">Agenda de Hoje</h3>
               <button
                 onClick={() => navigate('/appointments')}
                 className="text-sm text-primary hover:text-primary/80 transition-colors"
               >
-                View All
+                Ver Todas
               </button>
             </div>
             <div className="space-y-3">
@@ -184,7 +185,7 @@ export default function ClinicDashboardScreen() {
                   </div>
                   <div className="text-right">
                     <p className="text-foreground">{appointment.time}</p>
-                    <p className="text-sm text-muted-foreground">{appointment.status}</p>
+                    <p className="text-sm text-muted-foreground">Agendado</p>
                   </div>
                 </div>
               ))}

@@ -22,7 +22,7 @@ export default function ConnectionScreen() {
         navigate('/owner-dashboard');
       }, 2000);
     } catch (error) {
-      console.error('Connection failed:', error);
+      console.error('Falha na conexão:', error);
     } finally {
       setLoading(false);
     }
@@ -37,7 +37,7 @@ export default function ConnectionScreen() {
             className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
-            <span>Back</span>
+            <span>Voltar</span>
           </button>
         </div>
       </div>
@@ -47,9 +47,9 @@ export default function ConnectionScreen() {
           <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
             <LinkIcon className="w-10 h-10 text-primary" />
           </div>
-          <h1 className="text-3xl text-foreground mb-2">Link to Clinic</h1>
+          <h1 className="text-3xl text-foreground mb-2">Vincular à Clínica</h1>
           <p className="text-muted-foreground">
-            Connect {currentPet?.name || 'your pet'} with a veterinary clinic
+            Conecte {currentPet?.name || 'seu pet'} a uma clínica parceira
           </p>
         </div>
 
@@ -58,24 +58,24 @@ export default function ConnectionScreen() {
             <div className="w-20 h-20 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
               <Check className="w-10 h-10 text-green-500" />
             </div>
-            <h2 className="text-2xl text-foreground mb-2">Successfully Connected!</h2>
+            <h2 className="text-2xl text-foreground mb-2">Conectado com Sucesso!</h2>
             <p className="text-muted-foreground">
-              Your pet is now linked to the clinic. Redirecting...
+              Seu pet agora está vinculado à clínica. Redirecionando...
             </p>
           </div>
         ) : (
           <div className="bg-card rounded-3xl shadow-lg p-8 border border-border">
             <div className="mb-6">
-              <h2 className="text-xl text-foreground mb-4">How it works</h2>
+              <h2 className="text-xl text-foreground mb-4">Como funciona</h2>
               <div className="space-y-3">
                 <div className="flex items-start gap-3">
                   <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
                     <span className="text-primary">1</span>
                   </div>
                   <div className="flex-1">
-                    <p className="text-foreground">Get the clinic code</p>
+                    <p className="text-foreground">Obtenha o código da clínica</p>
                     <p className="text-sm text-muted-foreground">
-                      Ask your veterinary clinic for their connection code
+                      Peça à clínica veterinária parceira o seu código de conexão exclusivo
                     </p>
                   </div>
                 </div>
@@ -84,9 +84,9 @@ export default function ConnectionScreen() {
                     <span className="text-primary">2</span>
                   </div>
                   <div className="flex-1">
-                    <p className="text-foreground">Enter the code</p>
+                    <p className="text-foreground">Insira o código</p>
                     <p className="text-sm text-muted-foreground">
-                      Type the code below to establish the connection
+                      Digite o código recebido no campo abaixo para estabelecer a conexão
                     </p>
                   </div>
                 </div>
@@ -95,9 +95,9 @@ export default function ConnectionScreen() {
                     <span className="text-primary">3</span>
                   </div>
                   <div className="flex-1">
-                    <p className="text-foreground">Start sharing</p>
+                    <p className="text-foreground">Pronto para partilhar</p>
                     <p className="text-sm text-muted-foreground">
-                      The clinic can now access your pet's records
+                      A partir de agora, os profissionais autorizados da clínica poderão visualizar o histórico do seu pet
                     </p>
                   </div>
                 </div>
@@ -106,7 +106,7 @@ export default function ConnectionScreen() {
 
             <div className="border-t border-border pt-6">
               <form onSubmit={handleConnect}>
-                <label className="block text-foreground mb-3">Clinic Connection Code</label>
+                <label className="block text-foreground mb-3">Código de Conexão da Clínica</label>
                 <div className="relative mb-6">
                   <QrCode className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                   <input
@@ -114,7 +114,7 @@ export default function ConnectionScreen() {
                     value={clinicCode}
                     onChange={(e) => setClinicCode(e.target.value.toUpperCase())}
                     className="w-full pl-12 pr-4 py-4 bg-input border-2 border-border rounded-2xl focus:border-primary focus:outline-none transition-colors text-foreground text-center text-lg tracking-wider uppercase"
-                    placeholder="CLINIC1234"
+                    placeholder="CLINICA1234"
                     required
                   />
                 </div>
@@ -123,7 +123,7 @@ export default function ConnectionScreen() {
                   disabled={loading || !currentPet}
                   className="w-full bg-primary hover:bg-primary/90 text-white py-4 rounded-2xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {loading ? 'Connecting...' : 'Connect to Clinic'}
+                  {loading ? 'Conectando...' : 'Vincular Clínica'}
                 </button>
               </form>
             </div>
@@ -132,9 +132,9 @@ export default function ConnectionScreen() {
 
         {currentPet?.linkedClinicId && (
           <div className="bg-card rounded-2xl p-6 mt-6 border border-border">
-            <h3 className="text-foreground mb-2">Currently Connected</h3>
+            <h3 className="text-foreground mb-2">Vinculado Atualmente</h3>
             <p className="text-sm text-muted-foreground">
-              This pet is already linked to a clinic
+              Este pet já possui um vínculo ativo com um estabelecimento
             </p>
           </div>
         )}

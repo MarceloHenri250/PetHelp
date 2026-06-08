@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router';
-import { Syringe, FileText, Calendar, User, LogOut, ArrowLeft } from 'lucide-react';
+import { Syringe, FileText, Calendar, User, LogOut } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 export default function DashboardScreen() {
@@ -16,12 +16,12 @@ export default function DashboardScreen() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
         <div className="text-center">
-          <p className="text-gray-600 mb-4">No pet registered yet</p>
+          <p className="text-gray-600 mb-4">Nenhum pet cadastrado ainda</p>
           <button
             onClick={() => navigate('/pet-registration')}
             className="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-2xl transition-colors"
           >
-            Add Your Pet
+            Adicionar Seu Pet
           </button>
         </div>
       </div>
@@ -31,25 +31,25 @@ export default function DashboardScreen() {
   const menuItems = [
     {
       icon: Syringe,
-      label: 'Vaccines',
+      label: 'Vacinas',
       path: '/vaccines',
       color: 'bg-blue-500'
     },
     {
       icon: FileText,
-      label: 'Medical History',
+      label: 'Histórico Médico',
       path: '/medical-history',
       color: 'bg-purple-500'
     },
     {
       icon: Calendar,
-      label: 'Appointments',
+      label: 'Consultas',
       path: '/appointments',
       color: 'bg-orange-500'
     },
     {
       icon: User,
-      label: 'Profile',
+      label: 'Perfil',
       path: '/profile',
       color: 'bg-green-500'
     }
@@ -61,12 +61,13 @@ export default function DashboardScreen() {
       <div className="bg-green-500 rounded-b-[40px] px-6 pt-12 pb-8 shadow-lg">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h2 className="text-white/80">Welcome back,</h2>
+            <h2 className="text-white/80">Bem-vindo de volta,</h2>
             <h1 className="text-white text-2xl">{user?.name}</h1>
           </div>
           <button
             onClick={handleLogout}
             className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 transition-colors"
+            title="Sair"
           >
             <LogOut className="w-5 h-5 text-white" />
           </button>
@@ -84,16 +85,16 @@ export default function DashboardScreen() {
               <h2 className="text-2xl text-gray-800 mb-2">{pet.name}</h2>
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div>
-                  <p className="text-gray-500">Breed</p>
-                  <p className="text-gray-800">{pet.breed}</p>
+                  <p className="text-gray-500">Raça</p>
+                  <p className="text-gray-800">{pet.breed || 'Não informada'}</p>
                 </div>
                 <div>
-                  <p className="text-gray-500">Age</p>
-                  <p className="text-gray-800">{pet.age}</p>
+                  <p className="text-gray-500">Idade</p>
+                  <p className="text-gray-800">{pet.age || 'Não informada'}</p>
                 </div>
                 <div>
-                  <p className="text-gray-500">Weight</p>
-                  <p className="text-gray-800">{pet.weight}</p>
+                  <p className="text-gray-500">Peso</p>
+                  <p className="text-gray-800">{pet.weight || 'Não informado'}</p>
                 </div>
               </div>
             </div>
@@ -103,7 +104,7 @@ export default function DashboardScreen() {
 
       {/* Navigation Menu */}
       <div className="px-6 mt-8">
-        <h3 className="text-gray-700 text-lg mb-4">Quick Access</h3>
+        <h3 className="text-gray-700 text-lg mb-4">Acesso Rápido</h3>
         <div className="grid grid-cols-2 gap-4">
           {menuItems.map((item) => (
             <button

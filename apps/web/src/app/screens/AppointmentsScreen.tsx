@@ -51,7 +51,7 @@ export default function AppointmentsScreen() {
               className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
             >
               <ArrowLeft className="w-5 h-5" />
-              <span>Back</span>
+              <span>Voltar</span>
             </button>
             {user?.userType === 'owner' && (
               <button
@@ -59,7 +59,7 @@ export default function AppointmentsScreen() {
                 className="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-xl transition-colors flex items-center gap-2"
               >
                 <Plus className="w-5 h-5" />
-                <span>New Appointment</span>
+                <span>Nova Consulta</span>
               </button>
             )}
           </div>
@@ -67,12 +67,12 @@ export default function AppointmentsScreen() {
       </div>
 
       <div className="max-w-4xl mx-auto px-6 py-8">
-        <h1 className="text-3xl text-foreground mb-8">Appointments</h1>
+        <h1 className="text-3xl text-foreground mb-8">Consultas</h1>
 
         {showNewAppointment && (
           <div className="bg-card rounded-3xl shadow-lg p-6 mb-6 border border-border">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl text-foreground">Schedule New Appointment</h2>
+              <h2 className="text-xl text-foreground">Agendar Nova Consulta</h2>
               <button
                 onClick={() => setShowNewAppointment(false)}
                 className="text-muted-foreground hover:text-foreground transition-colors"
@@ -82,7 +82,7 @@ export default function AppointmentsScreen() {
             </div>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-foreground mb-2">Clinic Name</label>
+                <label className="block text-foreground mb-2">Nome da Clínica</label>
                 <div className="relative">
                   <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                   <input
@@ -90,14 +90,14 @@ export default function AppointmentsScreen() {
                     value={clinicName}
                     onChange={(e) => setClinicName(e.target.value)}
                     className="w-full pl-10 pr-4 py-3 bg-input border-2 border-border rounded-xl focus:border-primary focus:outline-none transition-colors text-foreground"
-                    placeholder="PetHelp Clinic"
+                    placeholder="Clínica PetHelp"
                     required
                   />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-foreground mb-2">Date</label>
+                  <label className="block text-foreground mb-2">Data</label>
                   <div className="relative">
                     <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                     <input
@@ -110,7 +110,7 @@ export default function AppointmentsScreen() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-foreground mb-2">Time</label>
+                  <label className="block text-foreground mb-2">Horário</label>
                   <div className="relative">
                     <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                     <input
@@ -124,13 +124,13 @@ export default function AppointmentsScreen() {
                 </div>
               </div>
               <div>
-                <label className="block text-foreground mb-2">Reason</label>
+                <label className="block text-foreground mb-2">Motivo</label>
                 <textarea
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                   className="w-full px-4 py-3 bg-input border-2 border-border rounded-xl focus:border-primary focus:outline-none transition-colors text-foreground resize-none"
                   rows={3}
-                  placeholder="E.g., Annual checkup, vaccination, etc."
+                  placeholder="Ex: Checkup anual, vacinação, sintomas de prostração, etc."
                   required
                 />
               </div>
@@ -138,16 +138,16 @@ export default function AppointmentsScreen() {
                 type="submit"
                 className="w-full bg-primary hover:bg-primary/90 text-white py-3 rounded-xl transition-colors"
               >
-                Schedule Appointment
+                Confirmar Agendamento
               </button>
             </form>
           </div>
         )}
 
         <div className="bg-card rounded-3xl shadow-lg p-6 mb-6 border border-border">
-          <h2 className="text-xl text-foreground mb-4">Scheduled</h2>
+          <h2 className="text-xl text-foreground mb-4">Agendadas</h2>
           {scheduled.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">No scheduled appointments</p>
+            <p className="text-muted-foreground text-center py-8">Nenhuma consulta agendada</p>
           ) : (
             <div className="space-y-3">
               {scheduled.map(appointment => (
@@ -175,7 +175,7 @@ export default function AppointmentsScreen() {
 
         {completed.length > 0 && (
           <div className="bg-card rounded-3xl shadow-lg p-6 border border-border">
-            <h2 className="text-xl text-foreground mb-4">Completed</h2>
+            <h2 className="text-xl text-foreground mb-4">Concluídas</h2>
             <div className="space-y-3">
               {completed.map(appointment => (
                 <div

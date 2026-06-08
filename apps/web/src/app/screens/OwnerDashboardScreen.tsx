@@ -33,13 +33,13 @@ export default function OwnerDashboardScreen() {
           <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
             <PawPrint className="w-10 h-10 text-white" />
           </div>
-          <h2 className="text-2xl text-foreground mb-2">No Pet Registered</h2>
-          <p className="text-muted-foreground mb-6">Please register a pet to continue</p>
+          <h2 className="text-2xl text-foreground mb-2">Nenhum Pet Cadastrado</h2>
+          <p className="text-muted-foreground mb-6">Por favor, cadastre um pet para continuar</p>
           <button
             onClick={() => navigate('/pet-registration', { state: { mode: 'create' } })}
             className="bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-2xl transition-colors"
           >
-            Register Pet
+            Cadastrar Pet
           </button>
         </div>
       </div>
@@ -57,13 +57,14 @@ export default function OwnerDashboardScreen() {
               </div>
               <div>
                 <h1 className="text-xl text-foreground">PetHelp</h1>
-                <p className="text-sm text-muted-foreground">{user?.name}</p>
+                <p className="text-sm text-muted-foreground">Olá, {user?.name}</p>
               </div>
             </div>
             <div className="flex gap-3">
               <button
                 onClick={() => navigate('/notifications')}
                 className="relative p-2 hover:bg-muted rounded-xl transition-colors"
+                title="Notificações"
               >
                 <Bell className="w-6 h-6 text-foreground" />
                 {unreadNotifications > 0 && (
@@ -75,6 +76,7 @@ export default function OwnerDashboardScreen() {
               <button
                 onClick={handleLogout}
                 className="p-2 hover:bg-muted rounded-xl transition-colors"
+                title="Sair"
               >
                 <LogOut className="w-6 h-6 text-foreground" />
               </button>
@@ -87,15 +89,15 @@ export default function OwnerDashboardScreen() {
         <div className="bg-card rounded-3xl shadow-lg p-6 mb-6 border border-border">
           <div className="flex items-center justify-between gap-4 mb-4">
             <div>
-              <h2 className="text-xl text-foreground">Active Pet</h2>
-              <p className="text-sm text-muted-foreground">Change the pet in focus from here</p>
+              <h2 className="text-xl text-foreground">Pet Ativo</h2>
+              <p className="text-sm text-muted-foreground">Altere o pet em foco por aqui</p>
             </div>
             <button
               onClick={() => navigate('/pet-registration', { state: { mode: 'create' } })}
               className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-2xl transition-colors"
             >
               <Plus className="w-4 h-4" />
-              New Pet
+              Novo Pet
             </button>
           </div>
 
@@ -135,24 +137,24 @@ export default function OwnerDashboardScreen() {
             <div className="flex-1">
               <div className="flex justify-between items-start mb-2">
                 <div>
-                  <h2 className="text-2xl text-foreground mb-1">{currentPet.name}</h2>
-                  <p className="text-muted-foreground">{currentPet.species ? `${currentPet.species} - ` : ''}{currentPet.breed}</p>
+                  <h2 className="text-2xl text-foreground mb-1">Perfil de {currentPet.name}</h2>
+                  <p className="text-muted-foreground">{currentPet.species ? `${currentPet.species} - ` : ''}{currentPet.breed || 'Raça não informada'}</p>
                 </div>
                 <button
                   onClick={() => navigate('/pet-profile')}
                   className="text-sm text-primary hover:text-primary/80 transition-colors"
                 >
-                  View Profile
+                  Ver Perfil
                 </button>
               </div>
               <div className="grid grid-cols-2 gap-4 mt-4">
                 <div>
-                  <p className="text-xs text-muted-foreground">Age</p>
-                  <p className="text-foreground">{currentPet.age}</p>
+                  <p className="text-xs text-muted-foreground">Idade</p>
+                  <p className="text-foreground">{currentPet.age || 'Não informada'}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Weight</p>
-                  <p className="text-foreground">{currentPet.weight}</p>
+                  <p className="text-xs text-muted-foreground">Peso</p>
+                  <p className="text-foreground">{currentPet.weight || 'Não informado'}</p>
                 </div>
               </div>
               {((currentPet.allergies && currentPet.allergies.length > 0) || (currentPet.conditions && currentPet.conditions.length > 0)) && (
@@ -160,7 +162,7 @@ export default function OwnerDashboardScreen() {
                   {currentPet.allergies && currentPet.allergies.length > 0 && (
                     <div>
                       <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3 text-primary" /> Allergies
+                        <AlertCircle className="w-3 h-3 text-primary" /> Alergias
                       </p>
                       <div className="flex flex-wrap gap-1">
                         {currentPet.allergies.map((allergy, i) => (
@@ -171,7 +173,7 @@ export default function OwnerDashboardScreen() {
                   )}
                   {currentPet.conditions && currentPet.conditions.length > 0 && (
                     <div>
-                      <p className="text-xs text-muted-foreground mb-1">Conditions</p>
+                      <p className="text-xs text-muted-foreground mb-1">Condições Médicas</p>
                       <div className="flex flex-wrap gap-1">
                         {currentPet.conditions.map((condition, i) => (
                           <span key={i} className="text-xs bg-muted text-foreground px-2 py-0.5 rounded-full border border-border">{condition}</span>
@@ -189,16 +191,16 @@ export default function OwnerDashboardScreen() {
           <div className="bg-primary/10 border border-primary rounded-2xl p-4 mb-6 flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
             <div className="flex-1">
-              <h3 className="text-foreground mb-1">Vaccines Overdue</h3>
+              <h3 className="text-foreground mb-1">Vacinas Atrasadas</h3>
               <p className="text-sm text-muted-foreground">
-                {overdueVaccines.length} vaccine{overdueVaccines.length > 1 ? 's' : ''} need attention
+                {overdueVaccines.length} vacina{overdueVaccines.length > 1 ? 's' : ''} precisa{overdueVaccines.length > 1 ? 'm' : ''} de atenção
               </p>
             </div>
             <button
               onClick={() => navigate('/vaccines')}
               className="text-sm text-primary hover:text-primary/80 transition-colors"
             >
-              View
+              Ver
             </button>
           </div>
         )}
@@ -214,14 +216,14 @@ export default function OwnerDashboardScreen() {
               </div>
               {overdueVaccines.length > 0 ? (
                 <span className="bg-primary text-white px-2 py-1 rounded-full text-xs">
-                  {overdueVaccines.length} late
+                  {overdueVaccines.length} atrasada(s)
                 </span>
               ) : (
-                <CheckCircle className="w-5 h-5 text-green-500" />
+                <CheckCircle className="w-5 h-5 text-green-500" title="Em dia" />
               )}
             </div>
-            <h3 className="text-lg text-foreground mb-1">Vaccines</h3>
-            <p className="text-sm text-muted-foreground">Manage vaccination records</p>
+            <h3 className="text-lg text-foreground mb-1">Vacinas</h3>
+            <p className="text-sm text-muted-foreground">Gerenciar carteira de vacinação</p>
           </button>
 
           <button
@@ -233,8 +235,8 @@ export default function OwnerDashboardScreen() {
                 <FileText className="w-6 h-6 text-primary" />
               </div>
             </div>
-            <h3 className="text-lg text-foreground mb-1">Medical History</h3>
-            <p className="text-sm text-muted-foreground">View past consultations</p>
+            <h3 className="text-lg text-foreground mb-1">Histórico Médico</h3>
+            <p className="text-sm text-muted-foreground">Ver prontuário e registros clínicos</p>
           </button>
 
           <button
@@ -251,8 +253,8 @@ export default function OwnerDashboardScreen() {
                 </span>
               )}
             </div>
-            <h3 className="text-lg text-foreground mb-1">Appointments</h3>
-            <p className="text-sm text-muted-foreground">Schedule & manage visits</p>
+            <h3 className="text-lg text-foreground mb-1">Consultas</h3>
+            <p className="text-sm text-muted-foreground">Agendar e gerenciar visitas médicas</p>
           </button>
 
           <button
@@ -264,8 +266,8 @@ export default function OwnerDashboardScreen() {
                 <Link className="w-6 h-6 text-primary" />
               </div>
             </div>
-            <h3 className="text-lg text-foreground mb-1">Link to Clinic</h3>
-            <p className="text-sm text-muted-foreground">Connect with your vet</p>
+            <h3 className="text-lg text-foreground mb-1">Conectar à Clínica</h3>
+            <p className="text-sm text-muted-foreground">Vincular pet a um estabelecimento veterinário</p>
           </button>
         </div>
 
@@ -275,26 +277,26 @@ export default function OwnerDashboardScreen() {
             className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-5 py-3 rounded-2xl transition-colors"
           >
             <Plus className="w-4 h-4" />
-            Add New Pet
+            Adicionar Novo Pet
           </button>
           <button
             onClick={() => navigate('/pet-profile')}
             className="inline-flex items-center gap-2 bg-card hover:bg-muted border border-border px-5 py-3 rounded-2xl transition-colors text-foreground"
           >
             <PawPrint className="w-4 h-4" />
-            Open Current Pet Profile
+            Abrir Perfil do Pet Atual
           </button>
         </div>
 
         {upcomingAppointments.length > 0 && (
           <div className="bg-card rounded-3xl shadow-lg p-6 border border-border">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl text-foreground">Upcoming Appointments</h3>
+              <h3 className="text-xl text-foreground">Próximas Consultas</h3>
               <button
                 onClick={() => navigate('/appointments')}
                 className="text-sm text-primary hover:text-primary/80 transition-colors"
               >
-                View All
+                Ver Todas
               </button>
             </div>
             <div className="space-y-3">

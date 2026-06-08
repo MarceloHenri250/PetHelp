@@ -71,7 +71,7 @@ export default function PetRegistrationScreen() {
       }
       navigate('/owner-dashboard');
     } catch (error) {
-      console.error('Pet registration failed:', error);
+      console.error('Falha no registro do pet:', error);
     } finally {
       setLoading(false);
     }
@@ -84,8 +84,8 @@ export default function PetRegistrationScreen() {
           <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center mb-4">
             <PawPrint className="w-10 h-10 text-white" />
           </div>
-          <h1 className="text-3xl text-foreground mb-2">{isEditing ? 'Edit Pet' : 'Add Your Pet'}</h1>
-          <p className="text-muted-foreground">{isEditing ? 'Update the pet information' : 'Tell us about your furry friend'}</p>
+          <h1 className="text-3xl text-foreground mb-2">{isEditing ? 'Editar Pet' : 'Adicionar Seu Pet'}</h1>
+          <p className="text-muted-foreground">{isEditing ? 'Atualize as informações do pet' : 'Conte-nos sobre seu amigo peludo'}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="bg-card rounded-3xl shadow-lg p-8 border border-border">
@@ -99,7 +99,7 @@ export default function PetRegistrationScreen() {
             </div>
             <div className="w-full">
               <label htmlFor="photo" className="block text-foreground mb-2 text-center text-sm font-medium">
-                Photo (optional)
+                Foto (opcional)
               </label>
               <input
                 type="file"
@@ -122,7 +122,7 @@ export default function PetRegistrationScreen() {
 
           <div className="mb-4">
             <label htmlFor="petName" className="block text-foreground mb-2">
-              Pet Name <span className="text-red-500">*</span>
+              Nome do Pet <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -137,7 +137,7 @@ export default function PetRegistrationScreen() {
 
           <div className="mb-4">
             <label htmlFor="species" className="block text-foreground mb-2">
-              Species
+              Espécie
             </label>
             <input
               type="text"
@@ -145,13 +145,13 @@ export default function PetRegistrationScreen() {
               value={species}
               onChange={(e) => setSpecies(e.target.value)}
               className="w-full px-4 py-3 bg-input border-2 border-border rounded-2xl focus:border-primary focus:outline-none transition-colors text-foreground"
-              placeholder="Dog, Cat, etc."
+              placeholder="Cão, Gato, etc."
             />
           </div>
 
           <div className="mb-4">
             <label htmlFor="age" className="block text-foreground mb-2">
-              Age <span className="text-red-500">*</span>
+              Idade <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -159,14 +159,14 @@ export default function PetRegistrationScreen() {
               value={age}
               onChange={(e) => setAge(e.target.value)}
               className="w-full px-4 py-3 bg-input border-2 border-border rounded-2xl focus:border-primary focus:outline-none transition-colors text-foreground"
-              placeholder="3 years"
+              placeholder="3 anos"
               required
             />
           </div>
 
           <div className="mb-4">
             <label htmlFor="breed" className="block text-foreground mb-2">
-              Breed <span className="text-red-500">*</span>
+              Raça <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -181,7 +181,7 @@ export default function PetRegistrationScreen() {
 
           <div className="mb-4">
             <label htmlFor="weight" className="block text-foreground mb-2">
-              Weight <span className="text-red-500">*</span>
+              Peso <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -196,7 +196,7 @@ export default function PetRegistrationScreen() {
 
           <div className="mb-4">
             <label htmlFor="allergies" className="block text-foreground mb-2">
-              Allergies (comma separated)
+              Alergias (separadas por vírgula)
             </label>
             <input
               type="text"
@@ -204,13 +204,13 @@ export default function PetRegistrationScreen() {
               value={allergiesStr}
               onChange={(e) => setAllergiesStr(e.target.value)}
               className="w-full px-4 py-3 bg-input border-2 border-border rounded-2xl focus:border-primary focus:outline-none transition-colors text-foreground"
-              placeholder="e.g. Peanuts, Dust"
+              placeholder="ex: Amendoim, Poeira"
             />
           </div>
 
           <div className="mb-4">
             <label htmlFor="conditions" className="block text-foreground mb-2">
-              Conditions (comma separated)
+              Condições (separadas por vírgula)
             </label>
             <input
               type="text"
@@ -218,7 +218,7 @@ export default function PetRegistrationScreen() {
               value={conditionsStr}
               onChange={(e) => setConditionsStr(e.target.value)}
               className="w-full px-4 py-3 bg-input border-2 border-border rounded-2xl focus:border-primary focus:outline-none transition-colors text-foreground"
-              placeholder="e.g. Diabetes, Arthritis"
+              placeholder="ex: Diabetes, Artrite"
             />
           </div>
 
@@ -227,7 +227,7 @@ export default function PetRegistrationScreen() {
             disabled={loading}
             className="w-full bg-primary hover:bg-primary/90 text-white py-4 rounded-2xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Saving...' : isEditing ? 'Update Pet' : 'Save Pet'}
+            {loading ? 'Salvando...' : isEditing ? 'Atualizar Pet' : 'Salvar Pet'}
           </button>
         </form>
       </div>
