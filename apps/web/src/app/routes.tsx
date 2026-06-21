@@ -1,67 +1,186 @@
+import type { ComponentType, ReactNode } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router';
+import { getDashboardRouteForUserType, type UserType } from './context/shared';
+import { useSession } from './context/SessionContext';
 import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
 import OwnerDashboardScreen from './screens/OwnerDashboardScreen';
 import ClinicDashboardScreen from './screens/ClinicDashboardScreen';
+import VeterinarianDashboardScreen from './screens/VeterinarianDashboardScreen';
 import PetRegistrationScreen from './screens/PetRegistrationScreen';
 import PetProfileScreen from './screens/PetProfileScreen';
 import MedicalHistoryScreen from './screens/MedicalHistoryScreen';
 import VaccinationScreen from './screens/VaccinationScreen';
+import ExamsScreen from './screens/ExamsScreen';
 import AppointmentsScreen from './screens/AppointmentsScreen';
 import NotificationsScreen from './screens/NotificationsScreen';
 import ConnectionScreen from './screens/ConnectionScreen';
+import OwnerProfileScreen from './screens/OwnerProfileScreen';
+import ClinicSettingsScreen from './screens/ClinicSettingsScreen';
+import VeterinarianSettingsScreen from './screens/VeterinarianSettingsScreen';
+
+function PublicOnly({ children }: { children: ReactNode }) {
+  const { authReady, isAuthenticated, user } = useSession();
+
+  if (!authReady) return null;
+  if (isAuthenticated) {
+    return <Navigate to={getDashboardRouteForUserType(user?.userType)} replace />;
+  }
+
+  return <>{children}</>;
+}
+
+function ProtectedOnly({ children }: { children: ReactNode }) {
+  const { authReady, isAuthenticated } = useSession();
+
+  if (!authReady) return null;
+  if (!isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
+}
+
+function withPublicOnly(Screen: ComponentType) {
+  return function PublicRoute() {
+    return (
+      <PublicOnly>
+        <Screen />
+      </PublicOnly>
+    );
+  };
+}
+
+function withProtectedOnly(Screen: ComponentType) {
+  return function ProtectedRoute() {
+    return (
+      <ProtectedOnly>
+        <Screen />
+      </ProtectedOnly>
+    );
+  };
+}
+
+function withAllowedUserTypes(Screen: ComponentType, allowedTypes: UserType[]) {
+  return function RoleGuardedRoute() {
+    const { authReady, isAuthenticated, user } = useSession();
+
+    if (!authReady) return null;
+    if (!isAuthenticated) return <Navigate to="/" replace />;
+    if (allowedTypes.length > 0 && !allowedTypes.includes(user?.userType ?? 'owner')) {
+      return <Navigate to={getDashboardRouteForUserType(user?.userType)} replace />;
+    }
+
+    return <Screen />;
+  };
+}
+
+function DashboardRedirect() {
+  const { authReady, isAuthenticated, user } = useSession();
+
+  if (!authReady) return null;
+  if (!isAuthenticated) return <Navigate to="/" replace />;
+
+  return <Navigate to={getDashboardRouteForUserType(user?.userType)} replace />;
+}
+
+function ProfileRedirect() {
+  const { authReady, isAuthenticated, user } = useSession();
+
+  if (!authReady) return null;
+  if (!isAuthenticated) return <Navigate to="/" replace />;
+
+  if (user?.userType === 'clinic') return <Navigate to="/clinic-settings" replace />;
+  if (user?.userType === 'veterinarian') return <Navigate to="/veterinarian-settings" replace />;
+  return <Navigate to="/settings" replace />;
+}
+
+function CatchAllRedirect() {
+  const { authReady, isAuthenticated, user } = useSession();
+
+  if (!authReady) return null;
+  if (isAuthenticated) {
+    return <Navigate to={getDashboardRouteForUserType(user?.userType)} replace />;
+  }
+
+  return <Navigate to="/" replace />;
+}
 
 export const router = createBrowserRouter([
   {
     path: '/',
-    Component: LoginScreen,
+    Component: withPublicOnly(LoginScreen),
   },
   {
     path: '/register',
-    Component: RegisterScreen,
+    Component: withPublicOnly(RegisterScreen),
   },
   {
     path: '/pet-registration',
-    Component: PetRegistrationScreen,
+    Component: withAllowedUserTypes(PetRegistrationScreen, ['owner']),
   },
   {
     path: '/owner-dashboard',
-    Component: OwnerDashboardScreen,
+    Component: withAllowedUserTypes(OwnerDashboardScreen, ['owner']),
   },
   {
     path: '/clinic-dashboard',
-    Component: ClinicDashboardScreen,
+    Component: withAllowedUserTypes(ClinicDashboardScreen, ['clinic']),
+  },
+  {
+    path: '/veterinarian-dashboard',
+    Component: withAllowedUserTypes(VeterinarianDashboardScreen, ['veterinarian']),
   },
   {
     path: '/pet-profile',
-    Component: PetProfileScreen,
+    Component: withAllowedUserTypes(PetProfileScreen, ['owner', 'veterinarian']),
   },
   {
     path: '/medical-history',
-    Component: MedicalHistoryScreen,
+    Component: withAllowedUserTypes(MedicalHistoryScreen, ['owner', 'veterinarian']),
   },
   {
     path: '/vaccines',
-    Component: VaccinationScreen,
+    Component: withAllowedUserTypes(VaccinationScreen, ['owner', 'veterinarian']),
+  },
+  {
+    path: '/exams',
+    Component: withAllowedUserTypes(ExamsScreen, ['owner', 'veterinarian']),
   },
   {
     path: '/appointments',
-    Component: AppointmentsScreen,
+    Component: withProtectedOnly(AppointmentsScreen),
   },
   {
     path: '/notifications',
-    Component: NotificationsScreen,
+    Component: withProtectedOnly(NotificationsScreen),
   },
   {
     path: '/connection',
-    Component: ConnectionScreen,
+    Component: withAllowedUserTypes(ConnectionScreen, ['owner', 'veterinarian']),
+  },
+  {
+    path: '/settings',
+    Component: withAllowedUserTypes(OwnerProfileScreen, ['owner']),
+  },
+  {
+    path: '/clinic-settings',
+    Component: withAllowedUserTypes(ClinicSettingsScreen, ['clinic']),
+  },
+  {
+    path: '/veterinarian-settings',
+    Component: withAllowedUserTypes(VeterinarianSettingsScreen, ['veterinarian']),
+  },
+  {
+    path: '/profile',
+    Component: ProfileRedirect,
   },
   {
     path: '/dashboard',
-    Component: () => <Navigate to="/owner-dashboard" replace />,
+    Component: DashboardRedirect,
   },
   {
     path: '*',
-    Component: () => <Navigate to="/" replace />,
+    Component: CatchAllRedirect,
   },
 ]);

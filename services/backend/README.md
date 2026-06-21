@@ -44,9 +44,12 @@ Deixar o backend preparado para receber os CRUDs principais da entrega, mantendo
 
 O backend foi preparado para MySQL.
 
-- Copie `.env.example` para `.env` e ajuste as credenciais.
-- Execute o script em `src/db/schema.sql` no seu banco vazio para criar as tabelas iniciais.
-- As tabelas já cobrem usuários, pets, histórico médico, vacinas, consultas e notificações.
+- Configure as variáveis de ambiente em `.env` com as credenciais do seu MySQL.
+- Para recriar o banco do zero, use `pnpm --filter @pethelp/backend db:reset`.
+- O script vai derrubar e recriar `pethelp` e depois aplicar `src/db/schema.sql`.
+- O novo schema separa autenticação e perfis em `users`, `tutors`, `clinics` e `veterinarians`.
+- As demais tabelas cobrem pets, histórico de posse, consultas, prontuários, vacinas, encaminhamentos e notificações.
+- Se preferir fazer manualmente, execute o `DROP DATABASE`, `CREATE DATABASE` e depois rode o schema.
 
 ## Próximos passos sugeridos
 

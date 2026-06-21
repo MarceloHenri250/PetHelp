@@ -1,18 +1,23 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { ArrowLeft, Plus, Syringe, Calendar, CheckCircle, AlertCircle, Trash2 } from 'lucide-react';
-import { useApp } from '../context/AppContext';
+import { ArrowLeft, Plus, Syringe, Calendar, Trash2, Pencil, X, CheckCircle, AlertCircle } from 'lucide-react';
+import { useHealth } from '../context/HealthContext';
+import { usePets } from '../context/PetsContext';
+import { useAppNavigation } from '../navigation';
 
 export default function VaccinationScreen() {
   const navigate = useNavigate();
-  const { user, currentPet, vaccines, addVaccine, deleteVaccine } = useApp();
+  const { currentPet } = usePets();
+  const { vaccines, addVaccine, updateVaccine, deleteVaccine } = useHealth();
+  const { goToPetContext } = useAppNavigation();
   const [showForm, setShowForm] = useState(false);
-  
-  // Estados do formulário
+  const [editingId, setEditingId] = useState<string | null>(null);
+
   const [name, setName] = useState('');
   const [date, setDate] = useState('');
   const [nextDose, setNextDose] = useState('');
   const [veterinarian, setVeterinarian] = useState('');
+  const [clinicName, setClinicName] = useState('');
 
   if (!currentPet) {
     return (
@@ -20,7 +25,7 @@ export default function VaccinationScreen() {
         <div className="text-center">
           <p className="text-foreground mb-4">Nenhum pet selecionado</p>
           <button
-            onClick={() => navigate(user?.userType === 'owner' ? '/owner-dashboard' : '/clinic-dashboard')}
+            onClick={goToPetContext}
             className="bg-primary text-white px-6 py-3 rounded-2xl"
           >
             Voltar
@@ -32,47 +37,73 @@ export default function VaccinationScreen() {
 
   const petVaccines = vaccines.filter(v => v.petId === currentPet.id);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name || !date) return;
-
-    addVaccine({
-      petId: currentPet.id,
-      name,
-      date,
-      nextDose: nextDose || undefined,
-      veterinarian: veterinarian || undefined,
-    });
-
-    // Limpar formulário
+  const clearForm = () => {
+    setEditingId(null);
     setName('');
     setDate('');
     setNextDose('');
     setVeterinarian('');
+    setClinicName('');
     setShowForm(false);
+  };
+
+  const startCreate = () => {
+    clearForm();
+    setShowForm(true);
+  };
+
+  const startEdit = (vaccine: (typeof petVaccines)[number]) => {
+    setEditingId(vaccine.id);
+    setName(vaccine.name);
+    setDate(vaccine.date);
+    setNextDose(vaccine.nextDose || '');
+    setVeterinarian(vaccine.veterinarian || '');
+    setClinicName(vaccine.clinicName || '');
+    setShowForm(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name || !date) return;
+
+    const payload = {
+      name,
+      date,
+      nextDose: nextDose || undefined,
+      veterinarian: veterinarian || undefined,
+      clinicName: clinicName || undefined,
+    };
+
+    if (editingId) {
+      await updateVaccine(editingId, payload);
+    } else {
+      await addVaccine({
+        petId: currentPet.id,
+        ...payload,
+      });
+    }
+
+    clearForm();
   };
 
   return (
     <div className="min-h-screen bg-background pb-12">
-      {/* Cabeçalho */}
       <div className="bg-card border-b border-border">
         <div className="max-w-4xl mx-auto px-6 py-4 flex justify-between items-center">
           <button
-            onClick={() => navigate('/profile')}
+            onClick={goToPetContext}
             className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
             <span>Voltar ao Perfil</span>
           </button>
-          {user?.userType === 'owner' && (
-            <button
-              onClick={() => setShowForm(!showForm)}
-              className="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-xl flex items-center gap-2 text-sm transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Registrar Vacina</span>
-            </button>
-          )}
+          <button
+            onClick={() => (showForm ? clearForm() : startCreate())}
+            className="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-xl flex items-center gap-2 text-sm transition-colors"
+          >
+            {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+            <span>{editingId ? 'Editar Vacina' : 'Registrar Vacina'}</span>
+          </button>
         </div>
       </div>
 
@@ -87,10 +118,11 @@ export default function VaccinationScreen() {
           </div>
         </div>
 
-        {/* Formulário de Cadastro (Se aberto) */}
         {showForm && (
           <form onSubmit={handleSubmit} className="bg-card rounded-3xl shadow-lg p-6 mb-8 border border-border">
-            <h2 className="text-xl text-foreground mb-4">Nova Vacina</h2>
+            <h2 className="text-xl text-foreground mb-4">
+              {editingId ? 'Editar Vacina' : 'Nova Vacina'}
+            </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
                 <label className="block text-sm text-foreground mb-2">Nome da Vacina *</label>
@@ -98,7 +130,7 @@ export default function VaccinationScreen() {
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Ex: Quádrupla Felina (V4), Antirrábica"
+                  placeholder="Ex: V8, Raiva, Gripe Canina"
                   className="w-full px-4 py-3 bg-input border-2 border-border rounded-xl text-foreground focus:border-primary focus:outline-none"
                   required
                 />
@@ -114,7 +146,7 @@ export default function VaccinationScreen() {
                 />
               </div>
               <div>
-                <label className="block text-sm text-foreground mb-2">Próxima Dose / Reforço (Opcional)</label>
+                <label className="block text-sm text-foreground mb-2">Próxima Dose (Opcional)</label>
                 <input
                   type="date"
                   value={nextDose}
@@ -132,11 +164,21 @@ export default function VaccinationScreen() {
                   className="w-full px-4 py-3 bg-input border-2 border-border rounded-xl text-foreground focus:border-primary focus:outline-none"
                 />
               </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm text-foreground mb-2">Clínica / Local de Aplicação (Opcional)</label>
+                <input
+                  type="text"
+                  value={clinicName}
+                  onChange={(e) => setClinicName(e.target.value)}
+                  placeholder="Ex: Clí­nica PetHelp"
+                  className="w-full px-4 py-3 bg-input border-2 border-border rounded-xl text-foreground focus:border-primary focus:outline-none"
+                />
+              </div>
             </div>
             <div className="flex justify-end gap-3">
               <button
                 type="button"
-                onClick={() => setShowForm(false)}
+                onClick={clearForm}
                 className="px-4 py-2 border border-border rounded-xl text-muted-foreground hover:bg-muted transition-colors"
               >
                 Cancelar
@@ -145,13 +187,12 @@ export default function VaccinationScreen() {
                 type="submit"
                 className="px-4 py-2 bg-primary text-white rounded-xl hover:bg-primary/90 transition-colors"
               >
-                Salvar Registro
+                {editingId ? 'Atualizar Registro' : 'Salvar Registro'}
               </button>
             </div>
           </form>
         )}
 
-        {/* Lista de Vacinas */}
         {petVaccines.length === 0 ? (
           <div className="bg-card rounded-3xl p-8 border border-border text-center">
             <p className="text-muted-foreground">Nenhuma vacina registrada para este pet.</p>
@@ -166,7 +207,8 @@ export default function VaccinationScreen() {
                     <th className="p-4">Data de Aplicação</th>
                     <th className="p-4">Próxima Dose</th>
                     <th className="p-4">Veterinário</th>
-                    {user?.userType === 'owner' && <th className="p-4 text-right">Ações</th>}
+                    <th className="p-4">Status</th>
+                    <th className="p-4 text-right">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -184,18 +226,38 @@ export default function VaccinationScreen() {
                             {vaccine.nextDose}
                           </span>
                         ) : (
-                          <span className="text-muted-foreground text-sm">Dose Única / Concluída</span>
+                          <span className="text-muted-foreground text-sm">Não informado</span>
                         )}
                       </td>
                       <td className="p-4 text-muted-foreground">
                         {vaccine.veterinarian || 'Não informado'}
                       </td>
-                      {user?.userType === 'owner' && (
-                        <td className="p-4 text-right">
+                      <td className="p-4">
+                        {vaccine.status === 'late' ? (
+                          <span className="inline-flex items-center gap-1.5 bg-destructive/10 text-destructive px-3 py-1 rounded-full text-xs font-medium">
+                            <AlertCircle className="w-3.5 h-3.5" />
+                            Atrasada
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 bg-green-500/10 text-green-600 px-3 py-1 rounded-full text-xs font-medium">
+                            <CheckCircle className="w-3.5 h-3.5" />
+                            Em dia
+                          </span>
+                        )}
+                      </td>
+                      <td className="p-4">
+                        <div className="flex justify-end items-center gap-2">
+                          <button
+                            onClick={() => startEdit(vaccine)}
+                            className="text-muted-foreground hover:text-primary p-1 rounded-lg transition-colors"
+                            title="Editar Vacina"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
                           <button
                             onClick={() => {
                               if (confirm(`Remover o registro da vacina ${vaccine.name}?`)) {
-                                deleteVaccine(vaccine.id);
+                                void deleteVaccine(vaccine.id);
                               }
                             }}
                             className="text-destructive hover:text-destructive/80 p-1 rounded-lg transition-colors"
@@ -203,8 +265,8 @@ export default function VaccinationScreen() {
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
-                        </td>
-                      )}
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -216,3 +278,8 @@ export default function VaccinationScreen() {
     </div>
   );
 }
+
+
+
+
+

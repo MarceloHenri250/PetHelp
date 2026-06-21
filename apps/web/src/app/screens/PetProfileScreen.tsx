@@ -1,21 +1,24 @@
-import React from 'react';
 import { useNavigate } from 'react-router';
-import { ArrowLeft, Calendar, FileText, Syringe, AlertCircle, Edit } from 'lucide-react';
-import { useApp } from '../context/AppContext';
+import { ArrowLeft, ArrowLeftRight, AlertCircle, Calendar, Edit, FileUp, FileText, PawPrint, Syringe } from 'lucide-react';
+import { getDashboardRouteForUserType } from '../context/shared';
+import { useHealth } from '../context/HealthContext';
+import { usePets } from '../context/PetsContext';
+import { useSession } from '../context/SessionContext';
+import { useAppNavigation } from '../navigation';
 
 export default function PetProfileScreen() {
   const navigate = useNavigate();
-  const { user, currentPet, medicalRecords, vaccines, deletePet } = useApp();
+  const { user } = useSession();
+  const { currentPet, deletePet, transferPetOwnership } = usePets();
+  const { medicalRecords, vaccines } = useHealth();
+  const { goToDashboard } = useAppNavigation();
 
   if (!currentPet) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <p className="text-foreground mb-4">Nenhum pet selecionado</p>
-          <button
-            onClick={() => navigate(user?.userType === 'owner' ? '/owner-dashboard' : '/clinic-dashboard')}
-            className="bg-primary text-white px-6 py-3 rounded-2xl"
-          >
+          <button onClick={() => goToDashboard(user?.userType)} className="bg-primary text-white px-6 py-3 rounded-2xl">
             Voltar
           </button>
         </div>
@@ -23,19 +26,20 @@ export default function PetProfileScreen() {
     );
   }
 
-  const petRecords = medicalRecords.filter(r => r.petId === currentPet.id);
-  const petVaccines = vaccines.filter(v => v.petId === currentPet.id);
+  const petRecords = medicalRecords.filter((record) => record.petId === currentPet.id);
+  const petVaccines = vaccines.filter((vaccine) => vaccine.petId === currentPet.id);
+  const petExams = medicalRecords.filter((record) => record.petId === currentPet.id && (record.documents?.length ?? 0) > 0);
 
   return (
     <div className="min-h-screen bg-background">
       <div className="bg-card border-b border-border">
         <div className="max-w-4xl mx-auto px-6 py-4">
           <button
-            onClick={() => navigate(user?.userType === 'owner' ? '/owner-dashboard' : '/clinic-dashboard')}
+            onClick={() => goToDashboard(user?.userType)}
             className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
           >
-              <ArrowLeft className="w-5 h-5" />
-              <span>Voltar</span>
+            <ArrowLeft className="w-5 h-5" />
+            <span>Voltar</span>
           </button>
         </div>
       </div>
@@ -43,11 +47,17 @@ export default function PetProfileScreen() {
       <div className="max-w-4xl mx-auto px-6 py-8">
         <div className="bg-card rounded-3xl shadow-lg p-8 mb-6 border border-border">
           <div className="flex items-start gap-6 mb-8">
-            <img
-              src={currentPet.photo}
-              alt={currentPet.name}
-              className="w-32 h-32 rounded-2xl object-cover border-4 border-primary"
-            />
+            {currentPet.photo ? (
+              <img
+                src={currentPet.photo}
+                alt={currentPet.name}
+                className="w-32 h-32 rounded-2xl object-cover border-4 border-primary"
+              />
+            ) : (
+              <div className="w-32 h-32 rounded-2xl border-4 border-primary bg-muted flex items-center justify-center">
+                <PawPrint className="w-12 h-12 text-muted-foreground" />
+              </div>
+            )}
             <div className="flex-1">
               <div className="flex justify-between items-start mb-4">
                 <div>
@@ -55,7 +65,7 @@ export default function PetProfileScreen() {
                   <p className="text-xl text-muted-foreground">{currentPet.species ? `${currentPet.species} - ` : ''}{currentPet.breed || 'Raça não informada'}</p>
                 </div>
                 {user?.userType === 'owner' && (
-                  <div className="flex gap-3">
+                  <div className="flex flex-wrap gap-3">
                     <button
                       onClick={() => navigate('/pet-registration', { state: { mode: 'edit' } })}
                       className="text-primary hover:text-primary/80 transition-colors"
@@ -66,16 +76,45 @@ export default function PetProfileScreen() {
                     <button
                       onClick={async () => {
                         if (!currentPet) return;
+                        const targetTutorEmail = prompt('Digite o e-mail do tutor que recebera o pet');
+                        if (!targetTutorEmail) return;
+                        const securityConfirmation = prompt('Digite TRANSFERIR para confirmar a operacao');
+                        if (!securityConfirmation) return;
+                        const petNameConfirmation = prompt(`Digite exatamente o nome de ${currentPet.name} para validar a transferencia`);
+                        if (!petNameConfirmation) return;
+
+                        try {
+                          await transferPetOwnership(currentPet.id, {
+                            targetTutorEmail,
+                            securityConfirmation,
+                            petNameConfirmation,
+                          });
+                          navigate(getDashboardRouteForUserType(user?.userType), { replace: true });
+                        } catch (err) {
+                          console.error('Erro ao transferir titularidade:', err);
+                          alert('Não foi possível transferir a titularidade deste pet.');
+                        }
+                      }}
+                      className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1.5 text-sm text-foreground hover:bg-muted transition-colors"
+                      title="Transferir titularidade"
+                    >
+                      <ArrowLeftRight className="w-4 h-4" />
+                      Transferir
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (!currentPet) return;
                         if (confirm(`Tem certeza que deseja excluir o perfil de ${currentPet.name}?`)) {
                           try {
                             await deletePet(currentPet.id);
-                            navigate('/owner-dashboard');
+                            navigate(getDashboardRouteForUserType(user?.userType), { replace: true });
                           } catch (err) {
                             console.error('Erro ao excluir pet:', err);
                           }
                         }
                       }}
-                      className="text-destructive hover:text-destructive/80 transition-colors" title="Excluir Pet"
+                      className="text-destructive hover:text-destructive/80 transition-colors"
+                      title="Excluir Pet"
                     >
                       Excluir
                     </button>
@@ -101,8 +140,8 @@ export default function PetProfileScreen() {
                         <AlertCircle className="w-4 h-4 text-primary" /> Alergias
                       </p>
                       <div className="flex flex-wrap gap-2">
-                        {currentPet.allergies.map((allergy, i) => (
-                          <span key={i} className="text-sm bg-primary/10 text-primary px-3 py-1 rounded-full">{allergy}</span>
+                        {currentPet.allergies.map((allergy, index) => (
+                          <span key={index} className="text-sm bg-primary/10 text-primary px-3 py-1 rounded-full">{allergy}</span>
                         ))}
                       </div>
                     </div>
@@ -111,8 +150,8 @@ export default function PetProfileScreen() {
                     <div>
                       <p className="text-sm text-muted-foreground mb-2">Condições Médicas</p>
                       <div className="flex flex-wrap gap-2">
-                        {currentPet.conditions.map((condition, i) => (
-                          <span key={i} className="text-sm bg-muted text-foreground px-3 py-1 rounded-full border border-border">{condition}</span>
+                        {currentPet.conditions.map((condition, index) => (
+                          <span key={index} className="text-sm bg-muted text-foreground px-3 py-1 rounded-full border border-border">{condition}</span>
                         ))}
                       </div>
                     </div>
@@ -123,7 +162,7 @@ export default function PetProfileScreen() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <button
             onClick={() => navigate('/medical-history')}
             className="bg-card hover:bg-muted border border-border rounded-2xl p-6 text-left transition-colors group"
@@ -144,6 +183,17 @@ export default function PetProfileScreen() {
             </div>
             <h3 className="text-lg text-foreground mb-1">Vacinação</h3>
             <p className="text-sm text-muted-foreground">{petVaccines.length} vacinas</p>
+          </button>
+
+          <button
+            onClick={() => navigate('/exams')}
+            className="bg-card hover:bg-muted border border-border rounded-2xl p-6 text-left transition-colors group"
+          >
+            <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors mb-3">
+              <FileUp className="w-6 h-6 text-primary" />
+            </div>
+            <h3 className="text-lg text-foreground mb-1">Exames</h3>
+            <p className="text-sm text-muted-foreground">{petExams.length} laudos</p>
           </button>
 
           <button
@@ -170,13 +220,11 @@ export default function PetProfileScreen() {
               </button>
             </div>
             <div className="space-y-3">
-              {petRecords.slice(0, 3).map(record => (
+              {petRecords.slice(0, 3).map((record) => (
                 <div key={record.id} className="bg-muted rounded-2xl p-4">
                   <div className="flex justify-between items-start mb-2">
                     <p className="text-foreground">{record.date}</p>
-                    {record.clinicName && (
-                      <p className="text-sm text-muted-foreground">{record.clinicName}</p>
-                    )}
+                    {record.clinicName && <p className="text-sm text-muted-foreground">{record.clinicName}</p>}
                   </div>
                   <p className="text-sm text-muted-foreground">{record.description}</p>
                 </div>

@@ -1,13 +1,25 @@
-import { RouterProvider } from 'react-router';
+﻿import { RouterProvider } from 'react-router';
 import { router } from './routes';
-import { AppProvider } from './context/AppContext';
+import { SessionProvider } from './context/SessionContext';
+import { InteractionProvider } from './context/InteractionContext';
+import { PetsProvider } from './context/PetsContext';
+import { HealthProvider } from './context/HealthContext';
+import { ReviewsProvider } from './context/ReviewsContext';
 
 export default function App() {
   return (
-    <AppProvider>
-      <div className="size-full">
-        <RouterProvider router={router} />
-      </div>
-    </AppProvider>
+    <SessionProvider>
+      <InteractionProvider>
+        <PetsProvider>
+          <ReviewsProvider>
+            <HealthProvider>
+              <div className="size-full">
+                <RouterProvider router={router} />
+              </div>
+            </HealthProvider>
+          </ReviewsProvider>
+        </PetsProvider>
+      </InteractionProvider>
+    </SessionProvider>
   );
 }

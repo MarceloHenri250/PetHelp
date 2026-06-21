@@ -1,11 +1,14 @@
-import React from 'react';
-import { useNavigate } from 'react-router';
+﻿import { useNavigate } from 'react-router';
 import { ArrowLeft, Bell, Syringe, Calendar, Link as LinkIcon } from 'lucide-react';
-import { useApp } from '../context/AppContext';
+import { useInteraction } from '../context/InteractionContext';
+import { useSession } from '../context/SessionContext';
+import { useAppNavigation } from '../navigation';
 
 export default function NotificationsScreen() {
   const navigate = useNavigate();
-  const { user, notifications, markNotificationAsRead } = useApp();
+  const { user } = useSession();
+  const { notifications, markNotificationAsRead } = useInteraction();
+  const { goToDashboard } = useAppNavigation();
 
   const userNotifications = notifications.filter(n => n.userId === user?.id);
   const unread = userNotifications.filter(n => !n.read);
@@ -33,7 +36,7 @@ export default function NotificationsScreen() {
       <div className="bg-card border-b border-border">
         <div className="max-w-4xl mx-auto px-6 py-4">
           <button
-            onClick={() => navigate('/owner-dashboard')}
+            onClick={() => goToDashboard(user?.userType)}
             className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -108,3 +111,9 @@ export default function NotificationsScreen() {
     </div>
   );
 }
+
+
+
+
+
+

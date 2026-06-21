@@ -2,9 +2,14 @@ import { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env.js';
 import { findUserById } from '../modules/users/users.service.js';
+import type { UserType } from '../modules/users/users.service.js';
 
 export interface AuthRequest extends Request {
-  user?: any;
+  user?: {
+    id: string;
+    email: string;
+    userType: UserType;
+  };
 }
 
 export async function requireAuth(req: AuthRequest, res: Response, next: NextFunction) {

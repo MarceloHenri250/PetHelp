@@ -1,17 +1,98 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { createUser, findUserByEmail } from '../users/users.service.js';
+import { randomInt } from 'node:crypto';
+import { pool } from '../../db/index.js';
 import { env } from '../../config/env.js';
+import {
+  createAuthUser,
+  createClinicProfile,
+  createTutorProfile,
+  createVeterinarianProfile,
+  findUserByEmail,
+  type UserType,
+} from '../users/users.service.js';
 
 const router = Router();
+const recoveryCodes = new Map<string, { code: string; expiresAt: number }>();
+
+function normalizeUserType(value: unknown): UserType | null {
+  if (value === 'tutor' || value === 'owner') {
+    return 'tutor';
+  }
+
+  if (value === 'clinic') {
+    return 'clinic';
+  }
+
+  if (value === 'veterinarian') {
+    return 'veterinarian';
+  }
+
+  return null;
+}
+
+function asTrimmedString(value: unknown) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function normalizeEmail(value: unknown) {
+  return asTrimmedString(value).toLowerCase();
+}
+
+function generateRecoveryCode() {
+  return String(randomInt(100000, 1000000));
+}
 
 router.post('/register', async (req, res, next) => {
-  try {
-    const { name, email, password, userType, clinicName } = req.body ?? {};
+  const connection = await pool.getConnection();
 
-    if (!name || !email || !password || !userType) {
-      res.status(400).json({ message: 'name, email, password and userType are required' });
+  try {
+    const body = req.body ?? {};
+    const email = asTrimmedString(body.email);
+    const password = asTrimmedString(body.password);
+    const userType = normalizeUserType(body.userType);
+    const name = asTrimmedString(body.name);
+    const phone = asTrimmedString(body.phone) || null;
+    const cpf = asTrimmedString(body.cpf) || null;
+    const tradeName = asTrimmedString(body.tradeName) || asTrimmedString(body.clinicName) || name;
+    const corporateName = asTrimmedString(body.corporateName) || null;
+    const cnpj = asTrimmedString(body.cnpj) || null;
+    const address = asTrimmedString(body.address);
+    const connectionCode = asTrimmedString(body.connectionCode) || asTrimmedString(body.connection_code) || null;
+    const services = Array.isArray(body.services)
+      ? JSON.stringify(body.services.map((service: unknown) => asTrimmedString(service)).filter(Boolean))
+      : asTrimmedString(body.services) || null;
+    const workingHours = body.workingHours !== undefined
+      ? JSON.stringify(body.workingHours)
+      : body.working_hours !== undefined
+        ? JSON.stringify(body.working_hours)
+        : null;
+    const crmv = asTrimmedString(body.crmv) || null;
+    const crmvUf = (asTrimmedString(body.crmvUf) || asTrimmedString(body.crmv_uf) || '').toUpperCase() || null;
+
+    if (!email || !password || !userType) {
+      res.status(400).json({ message: 'email, password and userType are required' });
+      return;
+    }
+
+    if (userType === 'tutor' && !name) {
+      res.status(400).json({ message: 'name is required for tutor registration' });
+      return;
+    }
+
+    if (userType === 'clinic' && !tradeName) {
+      res.status(400).json({ message: 'tradeName or clinicName is required for clinic registration' });
+      return;
+    }
+
+    if (userType === 'clinic' && !address) {
+      res.status(400).json({ message: 'address is required for clinic registration' });
+      return;
+    }
+
+    if (userType === 'veterinarian' && (!name || !crmv || !crmvUf)) {
+      res.status(400).json({ message: 'name, crmv and crmvUf are required for veterinarian registration' });
       return;
     }
 
@@ -21,20 +102,67 @@ router.post('/register', async (req, res, next) => {
       return;
     }
 
-    const password_hash = await bcrypt.hash(password, 10);
-    const id = await createUser({
-      name,
-      email,
-      password_hash,
-      user_type: userType,
-      clinic_name: clinicName ?? null,
-    });
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    await connection.beginTransaction();
+
+    const id = await createAuthUser(
+      {
+        email,
+        password_hash: passwordHash,
+        user_type: userType,
+      },
+      connection
+    );
+
+    if (userType === 'tutor') {
+      await createTutorProfile(
+        id,
+        {
+          name,
+          phone,
+          cpf,
+        },
+        connection
+      );
+    } else if (userType === 'clinic') {
+      await createClinicProfile(
+        id,
+        {
+          trade_name: tradeName,
+          corporate_name: corporateName,
+          cnpj,
+          phone,
+          address,
+          connection_code: connectionCode,
+          services,
+          working_hours: workingHours,
+        },
+        connection
+      );
+    } else {
+      await createVeterinarianProfile(
+        id,
+        {
+          name,
+          crmv: crmv ?? '',
+          crmv_uf: crmvUf ?? '',
+          phone,
+        },
+        connection
+      );
+    }
+
+    await connection.commit();
 
     const token = jwt.sign({ sub: id, email, userType }, env.jwtSecret, { expiresIn: '7d' });
 
-    res.status(201).json({ id, token });
+    res.status(201).json({ id, token, userType });
   } catch (error) {
+    await connection.rollback();
     next(error);
+  } finally {
+    connection.release();
   }
 });
 
@@ -46,22 +174,105 @@ router.post('/login', async (req, res, next) => {
       return;
     }
 
-    const user = await findUserByEmail(email);
+    const user = await findUserByEmail(String(email));
     if (!user) {
       res.status(401).json({ message: 'Invalid credentials' });
       return;
     }
 
-    const match = await bcrypt.compare(password, user.password_hash);
+    const match = await bcrypt.compare(String(password), user.password_hash);
     if (!match) {
       res.status(401).json({ message: 'Invalid credentials' });
       return;
     }
 
-    const token = jwt.sign({ sub: user.id, email: user.email, userType: user.user_type }, env.jwtSecret, { expiresIn: '7d' });
-    res.json({ id: user.id, token });
+    const token = jwt.sign({ sub: user.id, email: user.email, userType: user.user_type }, env.jwtSecret, {
+      expiresIn: '7d',
+    });
+    res.json({ id: user.id, token, userType: user.user_type });
   } catch (error) {
     next(error);
+  }
+});
+
+router.post('/password-recovery/request', async (req, res, next) => {
+  try {
+    const email = normalizeEmail(req.body?.email);
+    if (!email) {
+      res.status(400).json({ message: 'email is required' });
+      return;
+    }
+
+    const user = await findUserByEmail(email);
+    if (!user) {
+      res.status(404).json({ message: 'User not found' });
+      return;
+    }
+
+    const code = generateRecoveryCode();
+    recoveryCodes.set(email, {
+      code,
+      expiresAt: Date.now() + 10 * 60 * 1000,
+    });
+
+    res.json({
+      message: 'Recovery code generated',
+      code,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/password-recovery/confirm', async (req, res, next) => {
+  const connection = await pool.getConnection();
+
+  try {
+    const email = normalizeEmail(req.body?.email);
+    const code = asTrimmedString(req.body?.code);
+    const newPassword = asTrimmedString(req.body?.newPassword);
+
+    if (!email || !code || !newPassword) {
+      res.status(400).json({ message: 'email, code and newPassword are required' });
+      return;
+    }
+
+    const user = await findUserByEmail(email);
+    if (!user) {
+      res.status(404).json({ message: 'User not found' });
+      return;
+    }
+
+    const recovery = recoveryCodes.get(email);
+    if (!recovery) {
+      res.status(400).json({ message: 'Recovery code not requested' });
+      return;
+    }
+
+    if (recovery.expiresAt < Date.now()) {
+      recoveryCodes.delete(email);
+      res.status(410).json({ message: 'Recovery code expired' });
+      return;
+    }
+
+    if (recovery.code !== code) {
+      res.status(400).json({ message: 'Invalid recovery code' });
+      return;
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+
+    await connection.beginTransaction();
+    await connection.execute('UPDATE users SET password_hash = ? WHERE id = ?', [passwordHash, user.id]);
+    await connection.commit();
+    recoveryCodes.delete(email);
+
+    res.json({ message: 'Password updated successfully' });
+  } catch (error) {
+    await connection.rollback();
+    next(error);
+  } finally {
+    connection.release();
   }
 });
 

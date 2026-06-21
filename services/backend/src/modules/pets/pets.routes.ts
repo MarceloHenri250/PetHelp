@@ -1,29 +1,40 @@
 import { randomUUID } from 'node:crypto';
 import { Router } from 'express';
+import type { ResultSetHeader, RowDataPacket } from 'mysql2';
+import type { PoolConnection } from 'mysql2/promise';
+import { pool } from '../../db/index.js';
 import type { AuthRequest } from '../../middlewares/auth.js';
 import { requireAuth } from '../../middlewares/auth.js';
-import type { ResultSetHeader, RowDataPacket } from 'mysql2';
-import { pool } from '../../db/index.js';
+import {
+  findClinicByConnectionCode,
+  findClinicByUserId,
+  findTutorByUserId,
+  findUserByEmail,
+  findVeterinarianByUserId,
+} from '../users/users.service.js';
 
 type PetRow = RowDataPacket & {
   id: string;
-  owner_id: string;
+  current_tutor_id: string | null;
   linked_clinic_id: string | null;
   name: string;
   species: string;
   breed: string | null;
-  age: string;
+  age: string | null;
   weight: string | null;
   photo: string | null;
   allergies: string | null;
   conditions: string | null;
+  is_active: number | boolean;
   created_at: Date;
   updated_at: Date;
 };
 
+type DbClient = Pick<PoolConnection, 'execute' | 'query'>;
+
 const petSelectFields = `
   id,
-  owner_id AS ownerId,
+  current_tutor_id AS currentTutorId,
   linked_clinic_id AS linkedClinicId,
   name,
   species,
@@ -33,40 +44,41 @@ const petSelectFields = `
   photo,
   allergies,
   conditions,
+  is_active AS isActive,
   created_at AS createdAt,
   updated_at AS updatedAt
 `;
 
 function parseNullableJson(value: unknown): string | null {
-  if (value === undefined) {
+  if (value === undefined || value === null || value === '') {
     return null;
-  }
-
-  if (value === null || value === '') {
-    return null;
-  }
-
-  if (Array.isArray(value)) {
-    return JSON.stringify(value);
   }
 
   return JSON.stringify(value);
 }
 
-function parseSafeJson(value: any) {
-  if (typeof value !== 'string') return value || null;
+function parseSafeJson(value: unknown) {
+  if (typeof value !== 'string') {
+    return value ?? null;
+  }
+
   try {
     return JSON.parse(value);
-  } catch (e) {
+  } catch {
     return value;
   }
 }
 
 function normalizePet(row: PetRow) {
+  const currentTutorId = (row as PetRow & { currentTutorId?: string | null }).currentTutorId ?? row.current_tutor_id;
+  const linkedClinicId = (row as PetRow & { linkedClinicId?: string | null }).linkedClinicId ?? row.linked_clinic_id;
+  const isActive = (row as PetRow & { isActive?: number | boolean }).isActive ?? row.is_active;
+
   return {
     id: row.id,
-    ownerId: row.ownerId || row.owner_id,
-    linkedClinicId: row.linkedClinicId || row.linked_clinic_id,
+    currentTutorId,
+    ownerId: currentTutorId,
+    linkedClinicId,
     name: row.name,
     species: row.species,
     breed: row.breed,
@@ -75,41 +87,158 @@ function normalizePet(row: PetRow) {
     photo: row.photo,
     allergies: parseSafeJson(row.allergies),
     conditions: parseSafeJson(row.conditions),
-    createdAt: row.createdAt || row.created_at,
-    updatedAt: row.updatedAt || row.updated_at,
+    isActive: Boolean(isActive),
+    createdAt: (row as PetRow & { createdAt?: Date }).createdAt ?? row.created_at,
+    updatedAt: (row as PetRow & { updatedAt?: Date }).updatedAt ?? row.updated_at,
   };
+}
+
+function getDbClient(db: DbClient | null | undefined) {
+  return db ?? pool;
+}
+
+function canTutorAccessPet(user: AuthRequest['user'], row: PetRow) {
+  return user?.userType === 'tutor' ? row.current_tutor_id === user.id : true;
+}
+
+function canManagePet(tutorId: string | null, row: PetRow) {
+  return !!tutorId && row.current_tutor_id === tutorId;
+}
+
+async function resolveCurrentTutorId(user: AuthRequest['user']) {
+  if (user?.userType !== 'tutor') {
+    return null;
+  }
+
+  const tutor = await findTutorByUserId(user.id);
+  return tutor?.id ?? null;
+}
+
+async function resolveCurrentClinicId(user: AuthRequest['user']) {
+  if (user?.userType !== 'clinic') {
+    return null;
+  }
+
+  const clinic = await findClinicByUserId(user.id);
+  return clinic?.id ?? null;
+}
+
+async function resolveCurrentVeterinarianId(user: AuthRequest['user']) {
+  if (user?.userType !== 'veterinarian') {
+    return null;
+  }
+
+  const veterinarian = await findVeterinarianByUserId(user.id);
+  return veterinarian?.id ?? null;
+}
+
+async function resolveAccessibleClinicIdsForVeterinarian(user: AuthRequest['user']) {
+  const veterinarianId = await resolveCurrentVeterinarianId(user);
+  if (!veterinarianId) {
+    return [];
+  }
+
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `
+      SELECT clinic_id
+      FROM clinic_veterinarians
+      WHERE veterinarian_id = ? AND status = 'approved'
+    `,
+    [veterinarianId]
+  );
+
+  return rows.map((row) => String(row.clinic_id));
+}
+
+function normalizeTutorId(value: unknown) {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const trimmedValue = value.trim();
+  return trimmedValue.length > 0 ? trimmedValue : null;
+}
+
+function toBoolean(value: unknown) {
+  if (typeof value === 'string') {
+    return value.toLowerCase() === 'true' || value === '1';
+  }
+
+  return Boolean(value);
+}
+
+async function insertOwnershipHistory(db: DbClient, petId: string, previousTutorId: string | null, newTutorId: string) {
+  await db.execute(
+    `
+      INSERT INTO pet_ownership_history (
+        id,
+        pet_id,
+        previous_tutor_id,
+        new_tutor_id
+      ) VALUES (?, ?, ?, ?)
+    `,
+    [randomUUID(), petId, previousTutorId, newTutorId]
+  );
+}
+
+async function loadPetById(db: DbClient, petId: string) {
+  const [rows] = await db.query<PetRow[]>(`SELECT ${petSelectFields} FROM pets WHERE id = ? LIMIT 1`, [petId]);
+  return rows.length ? rows[0] : null;
 }
 
 export const petsRouter = Router();
 
-// protect all pet routes
 petsRouter.use(requireAuth);
 
 petsRouter.get('/', async (req: AuthRequest, res, next) => {
   try {
-    const { ownerId: qOwnerId, clinicId: qClinicId } = req.query;
-
-    // if no query provided, default to the authenticated user's scope
-    let ownerId = typeof qOwnerId === 'string' ? qOwnerId : null;
-    let clinicId = typeof qClinicId === 'string' ? qClinicId : null;
-
-    if (!ownerId && !clinicId) {
-      const user = req.user;
-      if (user.userType === 'owner') ownerId = user.id;
-      if (user.userType === 'clinic') clinicId = user.id;
-    }
-
+    const { ownerId, currentTutorId, includeInactive } = req.query;
+    const requestedTutorId = typeof currentTutorId === 'string'
+      ? currentTutorId
+      : typeof ownerId === 'string'
+        ? ownerId
+        : null;
+    const showInactive = includeInactive === 'true' || includeInactive === '1';
     const conditions: string[] = [];
-    const values: Array<string> = [];
+    const values: Array<string | number> = [];
+    const tutorId = await resolveCurrentTutorId(req.user);
+    const clinicId = await resolveCurrentClinicId(req.user);
+    const accessibleClinicIds = req.user?.userType === 'veterinarian' ? await resolveAccessibleClinicIdsForVeterinarian(req.user) : [];
 
-    if (typeof ownerId === 'string' && ownerId.length > 0) {
-      conditions.push('owner_id = ?');
-      values.push(ownerId);
-    }
+    if (req.user?.userType === 'tutor') {
+      if (!tutorId) {
+        res.status(403).json({ message: 'Forbidden' });
+        return;
+      }
 
-    if (typeof clinicId === 'string' && clinicId.length > 0) {
+      const effectiveTutorId = requestedTutorId ?? tutorId;
+      if (requestedTutorId && requestedTutorId !== tutorId) {
+        res.status(403).json({ message: 'Forbidden' });
+        return;
+      }
+
+      conditions.push('current_tutor_id = ?');
+      values.push(effectiveTutorId);
+    } else if (req.user?.userType === 'clinic') {
+      if (!clinicId) {
+        res.status(404).json({ message: 'Clinic profile not found' });
+        return;
+      }
+
       conditions.push('linked_clinic_id = ?');
       values.push(clinicId);
+    } else if (req.user?.userType === 'veterinarian') {
+      if (accessibleClinicIds.length === 0) {
+        res.json({ data: [] });
+        return;
+      }
+
+      conditions.push(`linked_clinic_id IN (${accessibleClinicIds.map(() => '?').join(', ')})`);
+      values.push(...accessibleClinicIds);
+    }
+
+    if (!showInactive) {
+      conditions.push('is_active = 1');
     }
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
@@ -125,65 +254,73 @@ petsRouter.get('/', async (req: AuthRequest, res, next) => {
 
 petsRouter.get('/:id', async (req: AuthRequest, res, next) => {
   try {
-    const petId = String(req.params.id);
-    const [rows] = await pool.query<PetRow[]>(`SELECT ${petSelectFields} FROM pets WHERE id = ? LIMIT 1`, [petId]);
+    const row = await loadPetById(pool, String(req.params.id));
 
-    if (rows.length === 0) {
+    if (!row) {
       res.status(404).json({ message: 'Pet not found' });
       return;
     }
 
-    // authorization: owners see their pets, clinics see linked pets
-    const user = req.user;
-    const row = rows[0];
-    if (user.userType === 'owner' && row.owner_id !== user.id) {
-      res.status(403).json({ message: 'Forbidden' });
-      return;
-    }
-    if (user.userType === 'clinic' && row.linked_clinic_id !== user.id) {
+    const tutorId = await resolveCurrentTutorId(req.user);
+    const clinicId = await resolveCurrentClinicId(req.user);
+    const accessibleClinicIds = req.user?.userType === 'veterinarian' ? await resolveAccessibleClinicIdsForVeterinarian(req.user) : [];
+
+    if (req.user?.userType === 'tutor' && (!tutorId || row.current_tutor_id !== tutorId)) {
       res.status(403).json({ message: 'Forbidden' });
       return;
     }
 
-    res.json({ data: normalizePet(rows[0]) });
+    if (req.user?.userType === 'clinic' && (!clinicId || row.linked_clinic_id !== clinicId)) {
+      res.status(403).json({ message: 'Forbidden' });
+      return;
+    }
+
+    if (req.user?.userType === 'veterinarian' && !accessibleClinicIds.includes(row.linked_clinic_id ?? '')) {
+      res.status(403).json({ message: 'Forbidden' });
+      return;
+    }
+
+    res.json({ data: normalizePet(row) });
   } catch (error) {
     next(error);
   }
 });
 
 petsRouter.post('/', async (req: AuthRequest, res, next) => {
+  const connection = await pool.getConnection();
+
   try {
-    const {
-      ownerId: bodyOwnerId,
-      name,
-      species,
-      breed = null,
-      age,
-      weight = null,
-      photo = null,
-      linkedClinicId = null,
-      allergies = null,
-      conditions = null,
-    } = req.body ?? {};
+    const tutorId = await resolveCurrentTutorId(req.user);
 
-    const user = req.user;
-    // determine ownerId: owners create their own pets; clinics must provide ownerId
-    const ownerId = user.userType === 'owner' ? user.id : bodyOwnerId;
-
-    if (!ownerId || !name || !species || !age) {
-      res.status(400).json({
-        message: 'ownerId, name, species, and age are required',
-      });
+    if (!tutorId) {
+      res.status(403).json({ message: 'Forbidden' });
       return;
     }
 
+    const body = req.body ?? {};
+    const currentTutorId = tutorId;
+    const name = typeof body.name === 'string' ? body.name.trim() : '';
+    const species = typeof body.species === 'string' ? body.species.trim() : '';
+    const breed = typeof body.breed === 'string' ? body.breed.trim() : null;
+    const age = typeof body.age === 'string' ? body.age.trim() : null;
+    const weight = typeof body.weight === 'string' ? body.weight.trim() : null;
+    const photo = typeof body.photo === 'string' ? body.photo : null;
+    const allergies = parseNullableJson(body.allergies);
+    const conditions = parseNullableJson(body.conditions);
+
+    if (!currentTutorId || !name || !species) {
+      res.status(400).json({ message: 'name and species are required' });
+      return;
+    }
+
+    await connection.beginTransaction();
+
     const id = randomUUID();
-    await pool.execute(
+    await connection.execute(
       `
         INSERT INTO pets (
           id,
-          owner_id,
-          linked_clinic_id,
+          current_tutor_id,
           name,
           species,
           breed,
@@ -192,38 +329,48 @@ petsRouter.post('/', async (req: AuthRequest, res, next) => {
           photo,
           allergies,
           conditions
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
-      [
-        id,
-        ownerId,
-        linkedClinicId,
-        name,
-        species,
-        breed,
-        age,
-        weight,
-        photo,
-        parseNullableJson(allergies),
-        parseNullableJson(conditions),
-      ]
+      [id, currentTutorId, name, species, breed, age, weight, photo, allergies, conditions]
     );
 
-    const [rows] = await pool.query<PetRow[]>(`SELECT ${petSelectFields} FROM pets WHERE id = ? LIMIT 1`, [id]);
+    await connection.commit();
 
-    res.status(201).json({ data: normalizePet(rows[0]) });
+    const row = await loadPetById(pool, id);
+    if (!row) {
+      res.status(500).json({ message: 'Pet creation failed' });
+      return;
+    }
+
+    res.status(201).json({ data: normalizePet(row) });
   } catch (error) {
+    await connection.rollback();
     next(error);
+  } finally {
+    connection.release();
   }
 });
 
 petsRouter.patch('/:id', async (req: AuthRequest, res, next) => {
+  const connection = await pool.getConnection();
+
   try {
-    const user = req.user;
-    const updates = req.body ?? {};
+    const existing = await loadPetById(connection, String(req.params.id));
+    if (!existing) {
+      res.status(404).json({ message: 'Pet not found' });
+      return;
+    }
+
+    const tutorId = await resolveCurrentTutorId(req.user);
+    if (!canManagePet(tutorId, existing)) {
+      res.status(403).json({ message: 'Forbidden' });
+      return;
+    }
+
+    const body = req.body ?? {};
     const allowedFields = [
+      'currentTutorId',
       'ownerId',
-      'linkedClinicId',
       'name',
       'species',
       'breed',
@@ -232,19 +379,26 @@ petsRouter.patch('/:id', async (req: AuthRequest, res, next) => {
       'photo',
       'allergies',
       'conditions',
+      'isActive',
     ] as const;
 
     const assignments: string[] = [];
-    const values: Array<string | null> = [];
+    const values: Array<string | number | null> = [];
+    const nextCurrentTutorId = normalizeTutorId(body.currentTutorId) ?? normalizeTutorId(body.ownerId) ?? undefined;
+
+    if (nextCurrentTutorId && nextCurrentTutorId !== tutorId) {
+      res.status(403).json({ message: 'Forbidden' });
+      return;
+    }
 
     for (const field of allowedFields) {
-      if (updates[field] === undefined) {
+      if (body[field] === undefined) {
         continue;
       }
 
       const columnMap: Record<(typeof allowedFields)[number], string> = {
-        ownerId: 'owner_id',
-        linkedClinicId: 'linked_clinic_id',
+        currentTutorId: 'current_tutor_id',
+        ownerId: 'current_tutor_id',
         name: 'name',
         species: 'species',
         breed: 'breed',
@@ -253,14 +407,20 @@ petsRouter.patch('/:id', async (req: AuthRequest, res, next) => {
         photo: 'photo',
         allergies: 'allergies',
         conditions: 'conditions',
+        isActive: 'is_active',
       };
 
       assignments.push(`${columnMap[field]} = ?`);
-      values.push(
-        field === 'allergies' || field === 'conditions'
-          ? parseNullableJson(updates[field])
-          : (updates[field] as string | null)
-      );
+
+      if (field === 'allergies' || field === 'conditions') {
+        values.push(parseNullableJson(body[field]));
+      } else if (field === 'isActive') {
+        values.push(toBoolean(body[field]) ? 1 : 0);
+      } else if (field === 'currentTutorId' || field === 'ownerId') {
+        values.push(nextCurrentTutorId ?? null);
+      } else {
+        values.push((typeof body[field] === 'string' ? body[field].trim() : body[field]) as string | null);
+      }
     }
 
     if (assignments.length === 0) {
@@ -268,68 +428,199 @@ petsRouter.patch('/:id', async (req: AuthRequest, res, next) => {
       return;
     }
 
+    await connection.beginTransaction();
+
+    const previousTutorId = existing.current_tutor_id;
+    const nextTutorId = nextCurrentTutorId ?? existing.current_tutor_id;
+
     values.push(String(req.params.id));
+    const [result] = await connection.execute<ResultSetHeader>(`UPDATE pets SET ${assignments.join(', ')} WHERE id = ?`, values);
 
-    // ensure the requester is allowed to update this pet
-    const [existing] = await pool.query<PetRow[]>(`SELECT * FROM pets WHERE id = ? LIMIT 1`, [req.params.id]);
-    if (existing.length === 0) {
-      res.status(404).json({ message: 'Pet not found' });
-      return;
-    }
-    const existingPet = existing[0];
-    if (user.userType === 'owner' && existingPet.owner_id !== user.id) {
-      res.status(403).json({ message: 'Forbidden' });
-      return;
-    }
-    if (user.userType === 'clinic' && existingPet.linked_clinic_id !== user.id) {
-      res.status(403).json({ message: 'Forbidden' });
-      return;
-    }
-
-    const [result] = await pool.execute<ResultSetHeader>(`UPDATE pets SET ${assignments.join(', ')} WHERE id = ?`, values);
-
-    const affectedRows = result.affectedRows ?? 0;
-
-    if (affectedRows === 0) {
+    if ((result.affectedRows ?? 0) === 0) {
+      await connection.rollback();
       res.status(404).json({ message: 'Pet not found' });
       return;
     }
 
-    const [rows] = await pool.query<PetRow[]>(`SELECT ${petSelectFields} FROM pets WHERE id = ? LIMIT 1`, [String(req.params.id)]);
+    if (typeof nextTutorId === 'string' && nextTutorId.length > 0 && nextTutorId !== previousTutorId) {
+      await insertOwnershipHistory(connection, String(req.params.id), previousTutorId, nextTutorId);
+    }
 
-    res.json({ data: normalizePet(rows[0]) });
+    await connection.commit();
+
+    const updated = await loadPetById(pool, String(req.params.id));
+    if (!updated) {
+      res.status(500).json({ message: 'Pet update failed' });
+      return;
+    }
+
+    res.json({ data: normalizePet(updated) });
   } catch (error) {
+    await connection.rollback();
     next(error);
+  } finally {
+    connection.release();
   }
 });
 
-petsRouter.delete('/:id', async (req: AuthRequest, res, next) => {
+petsRouter.post('/:id/transfer', async (req: AuthRequest, res, next) => {
+  const connection = await pool.getConnection();
+
   try {
-    const user = req.user;
-    const [existing] = await pool.query<PetRow[]>(`SELECT * FROM pets WHERE id = ? LIMIT 1`, [String(req.params.id)]);
-    if (existing.length === 0) {
-      res.status(404).json({ message: 'Pet not found' });
-      return;
-    }
-    const existingPet = existing[0];
-    if (user.userType === 'owner' && existingPet.owner_id !== user.id) {
-      res.status(403).json({ message: 'Forbidden' });
-      return;
-    }
-    if (user.userType === 'clinic' && existingPet.linked_clinic_id !== user.id) {
-      res.status(403).json({ message: 'Forbidden' });
-      return;
-    }
-    const [result] = await pool.execute<ResultSetHeader>('DELETE FROM pets WHERE id = ?', [String(req.params.id)]);
-    const affectedRows = result.affectedRows ?? 0;
-
-    if (affectedRows === 0) {
+    const existing = await loadPetById(connection, String(req.params.id));
+    if (!existing) {
       res.status(404).json({ message: 'Pet not found' });
       return;
     }
 
+    const tutorId = await resolveCurrentTutorId(req.user);
+    if (!canManagePet(tutorId, existing)) {
+      res.status(403).json({ message: 'Forbidden' });
+      return;
+    }
+
+    const body = req.body ?? {};
+    const targetTutorEmail = typeof body.targetTutorEmail === 'string' ? body.targetTutorEmail.trim().toLowerCase() : '';
+    const securityConfirmation = typeof body.securityConfirmation === 'string' ? body.securityConfirmation.trim() : '';
+    const petNameConfirmation = typeof body.petNameConfirmation === 'string' ? body.petNameConfirmation.trim() : '';
+
+    if (!targetTutorEmail || !securityConfirmation || !petNameConfirmation) {
+      res.status(400).json({ message: 'targetTutorEmail, securityConfirmation and petNameConfirmation are required' });
+      return;
+    }
+
+    if (petNameConfirmation.toLowerCase() !== existing.name.trim().toLowerCase()) {
+      res.status(403).json({ message: 'Security confirmation does not match the selected pet' });
+      return;
+    }
+
+    if (securityConfirmation.toUpperCase() !== 'TRANSFERIR') {
+      res.status(403).json({ message: 'Security confirmation is invalid' });
+      return;
+    }
+
+    const targetUser = await findUserByEmail(targetTutorEmail);
+    if (!targetUser || targetUser.user_type !== 'tutor') {
+      res.status(404).json({ message: 'Target tutor not found' });
+      return;
+    }
+
+    const targetTutor = await findTutorByUserId(targetUser.id);
+    if (!targetTutor) {
+      res.status(404).json({ message: 'Target tutor profile not found' });
+      return;
+    }
+
+    if (targetTutor.id === existing.current_tutor_id) {
+      res.status(400).json({ message: 'The pet is already assigned to this tutor' });
+      return;
+    }
+
+    await connection.beginTransaction();
+
+    const [result] = await connection.execute<ResultSetHeader>(
+      'UPDATE pets SET current_tutor_id = ? WHERE id = ?',
+      [targetTutor.id, String(req.params.id)]
+    );
+
+    if ((result.affectedRows ?? 0) === 0) {
+      await connection.rollback();
+      res.status(404).json({ message: 'Pet not found' });
+      return;
+    }
+
+    await insertOwnershipHistory(connection, String(req.params.id), existing.current_tutor_id, targetTutor.id);
+    await connection.commit();
+
+    const updated = await loadPetById(pool, String(req.params.id));
+    if (!updated) {
+      res.status(500).json({ message: 'Pet transfer failed' });
+      return;
+    }
+
+    res.json({ data: normalizePet(updated), message: 'Pet transfer completed successfully' });
+  } catch (error) {
+    await connection.rollback();
+    next(error);
+  } finally {
+    connection.release();
+  }
+});
+petsRouter.delete('/:id', async (req: AuthRequest, res, next) => {
+  const connection = await pool.getConnection();
+
+  try {
+    const existing = await loadPetById(connection, String(req.params.id));
+    if (!existing) {
+      res.status(404).json({ message: 'Pet not found' });
+      return;
+    }
+
+    const tutorId = await resolveCurrentTutorId(req.user);
+    if (!canManagePet(tutorId, existing)) {
+      res.status(403).json({ message: 'Forbidden' });
+      return;
+    }
+
+    await connection.execute<ResultSetHeader>('UPDATE pets SET is_active = 0 WHERE id = ?', [String(req.params.id)]);
     res.status(204).send();
   } catch (error) {
     next(error);
+  } finally {
+    connection.release();
   }
 });
+
+petsRouter.post('/:id/link-clinic', async (req: AuthRequest, res, next) => {
+  const connection = await pool.getConnection();
+
+  try {
+    const existing = await loadPetById(connection, String(req.params.id));
+    if (!existing) {
+      res.status(404).json({ message: 'Pet not found' });
+      return;
+    }
+
+    const tutorId = await resolveCurrentTutorId(req.user);
+    if (!canManagePet(tutorId, existing)) {
+      res.status(403).json({ message: 'Forbidden' });
+      return;
+    }
+
+    const connectionCode = typeof req.body?.connectionCode === 'string' ? req.body.connectionCode.trim().toUpperCase() : '';
+    if (!connectionCode) {
+      res.status(400).json({ message: 'connectionCode is required' });
+      return;
+    }
+
+    const clinic = await findClinicByConnectionCode(connectionCode);
+    if (!clinic) {
+      res.status(404).json({ message: 'Clinic not found' });
+      return;
+    }
+
+    await connection.beginTransaction();
+    await connection.execute<ResultSetHeader>(
+      'UPDATE pets SET linked_clinic_id = ? WHERE id = ?',
+      [clinic.id, String(req.params.id)]
+    );
+    await connection.commit();
+
+    const updated = await loadPetById(connection, String(req.params.id));
+    if (!updated) {
+      res.status(500).json({ message: 'Pet link update failed' });
+      return;
+    }
+
+    res.json({
+      data: normalizePet(updated),
+      message: 'Pet linked to clinic successfully',
+    });
+  } catch (error) {
+    await connection.rollback();
+    next(error);
+  } finally {
+    connection.release();
+  }
+});
+

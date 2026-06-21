@@ -1,13 +1,12 @@
-// @ts-nocheck
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { Camera, PawPrint } from 'lucide-react';
-import { useApp } from '../context/AppContext';
+import { usePets } from '../context/PetsContext';
 
 export default function PetRegistrationScreen() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, currentPet, addPet, updatePet } = useApp();
+  const { currentPet, addPet, updatePet } = usePets();
   const isEditing = location.state?.mode === 'edit' && !!currentPet;
   const [name, setName] = useState('');
   const [species, setSpecies] = useState('');
@@ -17,10 +16,14 @@ export default function PetRegistrationScreen() {
   const [photo, setPhoto] = useState('');
   const [allergiesStr, setAllergiesStr] = useState('');
   const [conditionsStr, setConditionsStr] = useState('');
-  const [initialHealthHistory, setInitialHealthHistory] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    if (location.state?.mode === 'edit' && !currentPet) {
+      navigate('/owner-dashboard', { replace: true });
+      return;
+    }
+
     if (!isEditing || !currentPet) {
       setName('');
       setSpecies('');
@@ -30,51 +33,51 @@ export default function PetRegistrationScreen() {
       setPhoto('');
       setAllergiesStr('');
       setConditionsStr('');
-      setInitialHealthHistory('');
       return;
     }
 
     setName(currentPet.name);
     setSpecies(currentPet.species || '');
-    setAge(currentPet.age);
-    setBreed(currentPet.breed);
-    setWeight(currentPet.weight);
+    setAge(currentPet.age || '');
+    setBreed(currentPet.breed || '');
+    setWeight(currentPet.weight || '');
     setPhoto(currentPet.photo || '');
     setAllergiesStr(currentPet.allergies ? currentPet.allergies.join(', ') : '');
     setConditionsStr(currentPet.conditions ? currentPet.conditions.join(', ') : '');
-    setInitialHealthHistory(currentPet.initialHealthHistory || '');
-  }, [isEditing, currentPet]);
+  }, [isEditing, currentPet, location.state?.mode, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
     try {
       const petPayload = {
-        name,
-        species: species || undefined,
-        age,
-        breed,
-        weight,
-        photo: photo || undefined,
-        allergies: allergiesStr ? allergiesStr.split(',').map(s => s.trim()).filter(Boolean) : undefined,
-        conditions: conditionsStr ? conditionsStr.split(',').map(s => s.trim()).filter(Boolean) : undefined,
-        initialHealthHistory: initialHealthHistory || undefined,
+        name: name.trim(),
+        species: species.trim(),
+        age: age.trim() || null,
+        breed: breed.trim() || null,
+        weight: weight.trim() || null,
+        photo: photo || null,
+        allergies: allergiesStr ? allergiesStr.split(',').map(s => s.trim()).filter(Boolean) : null,
+        conditions: conditionsStr ? conditionsStr.split(',').map(s => s.trim()).filter(Boolean) : null,
       };
 
       if (isEditing && currentPet) {
         await updatePet(currentPet.id, petPayload);
       } else {
-        await addPet({
-          ...petPayload,
-          ownerId: user?.id || '',
-        });
+        await addPet(petPayload);
       }
-      navigate('/owner-dashboard');
+
+      navigate(isEditing ? '/pet-profile' : '/owner-dashboard', { replace: true });
     } catch (error) {
       console.error('Falha no registro do pet:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCancel = () => {
+    navigate(isEditing ? '/pet-profile' : '/owner-dashboard', { replace: true });
   };
 
   return (
@@ -85,7 +88,9 @@ export default function PetRegistrationScreen() {
             <PawPrint className="w-10 h-10 text-white" />
           </div>
           <h1 className="text-3xl text-foreground mb-2">{isEditing ? 'Editar Pet' : 'Adicionar Seu Pet'}</h1>
-          <p className="text-muted-foreground">{isEditing ? 'Atualize as informações do pet' : 'Conte-nos sobre seu amigo peludo'}</p>
+          <p className="text-muted-foreground">
+            {isEditing ? 'Atualize as informações do pet' : 'Conte-nos sobre seu amigo peludo'}
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="bg-card rounded-3xl shadow-lg p-8 border border-border">
@@ -107,13 +112,13 @@ export default function PetRegistrationScreen() {
                 accept="image/*"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
-                  if (file) {
-                    const reader = new FileReader();
-                    reader.onloadend = () => {
-                      setPhoto(reader.result as string);
-                    };
-                    reader.readAsDataURL(file);
-                  }
+                  if (!file) return;
+
+                  const reader = new FileReader();
+                  reader.onloadend = () => {
+                    setPhoto(reader.result as string);
+                  };
+                  reader.readAsDataURL(file);
                 }}
                 className="w-full px-4 py-3 bg-input border-2 border-border rounded-2xl focus:border-primary focus:outline-none transition-colors text-foreground text-center file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-primary/90"
               />
@@ -137,7 +142,7 @@ export default function PetRegistrationScreen() {
 
           <div className="mb-4">
             <label htmlFor="species" className="block text-foreground mb-2">
-              Espécie
+              Espécie <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -145,13 +150,14 @@ export default function PetRegistrationScreen() {
               value={species}
               onChange={(e) => setSpecies(e.target.value)}
               className="w-full px-4 py-3 bg-input border-2 border-border rounded-2xl focus:border-primary focus:outline-none transition-colors text-foreground"
-              placeholder="Cão, Gato, etc."
+              placeholder="Cachorro, Gato, etc."
+              required
             />
           </div>
 
           <div className="mb-4">
             <label htmlFor="age" className="block text-foreground mb-2">
-              Idade <span className="text-red-500">*</span>
+              Idade
             </label>
             <input
               type="text"
@@ -160,13 +166,12 @@ export default function PetRegistrationScreen() {
               onChange={(e) => setAge(e.target.value)}
               className="w-full px-4 py-3 bg-input border-2 border-border rounded-2xl focus:border-primary focus:outline-none transition-colors text-foreground"
               placeholder="3 anos"
-              required
             />
           </div>
 
           <div className="mb-4">
             <label htmlFor="breed" className="block text-foreground mb-2">
-              Raça <span className="text-red-500">*</span>
+              Raça
             </label>
             <input
               type="text"
@@ -175,13 +180,12 @@ export default function PetRegistrationScreen() {
               onChange={(e) => setBreed(e.target.value)}
               className="w-full px-4 py-3 bg-input border-2 border-border rounded-2xl focus:border-primary focus:outline-none transition-colors text-foreground"
               placeholder="Golden Retriever"
-              required
             />
           </div>
 
           <div className="mb-4">
             <label htmlFor="weight" className="block text-foreground mb-2">
-              Peso <span className="text-red-500">*</span>
+              Peso
             </label>
             <input
               type="text"
@@ -190,7 +194,6 @@ export default function PetRegistrationScreen() {
               onChange={(e) => setWeight(e.target.value)}
               className="w-full px-4 py-3 bg-input border-2 border-border rounded-2xl focus:border-primary focus:outline-none transition-colors text-foreground"
               placeholder="25 kg"
-              required
             />
           </div>
 
@@ -222,15 +225,27 @@ export default function PetRegistrationScreen() {
             />
           </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-primary hover:bg-primary/90 text-white py-4 rounded-2xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? 'Salvando...' : isEditing ? 'Atualizar Pet' : 'Salvar Pet'}
-          </button>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button
+              type="button"
+              onClick={handleCancel}
+              className="w-full sm:w-auto px-6 py-4 border border-border rounded-2xl text-muted-foreground hover:bg-muted transition-colors"
+              disabled={loading}
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-primary hover:bg-primary/90 text-white py-4 rounded-2xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Salvando...' : isEditing ? 'Atualizar Pet' : 'Salvar Pet'}
+            </button>
+          </div>
         </form>
       </div>
     </div>
   );
 }
+
+
