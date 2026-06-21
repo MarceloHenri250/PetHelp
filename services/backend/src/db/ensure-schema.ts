@@ -1,4 +1,4 @@
-import type { RowDataPacket } from 'mysql2/promise';
+﻿import type { RowDataPacket } from 'mysql2/promise';
 import { pool } from './pool.js';
 
 type ColumnRow = RowDataPacket & {
@@ -31,6 +31,7 @@ async function ensureNullableColumn(tableName: string, columnName: string, colum
 }
 
 export async function ensureDatabaseSchema() {
+  await ensureNullableColumn('clinics', 'address', 'address VARCHAR(255) NULL');
   await ensureNullableColumn('clinics', 'services', 'services JSON NULL');
   await ensureNullableColumn('clinics', 'working_hours', 'working_hours JSON NULL');
   await ensureNullableColumn('pets', 'linked_clinic_id', 'linked_clinic_id CHAR(36) NULL');
@@ -81,3 +82,4 @@ export async function ensureDatabaseSchema() {
     )
   `);
 }
+

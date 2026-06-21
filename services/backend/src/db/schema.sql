@@ -1,9 +1,9 @@
--- Active: 1780852270164@@127.0.0.1@3306@pethelp
+﻿-- Active: 1780852270164@@127.0.0.1@3306@pethelp
 CREATE DATABASE IF NOT EXISTS pethelp CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE pethelp;
 
 -- ============================================================================
--- 1. AUTENTICAÇÃO E PERFIS
+-- 1. AUTENTICAÃ‡ÃƒO E PERFIS
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS users (
@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS clinics (
   corporate_name VARCHAR(180) NULL,
   cnpj VARCHAR(18) NULL UNIQUE,
   phone VARCHAR(30) NULL,
-  address VARCHAR(255) NOT NULL,
+  address VARCHAR(255) NULL,
   connection_code VARCHAR(32) NULL UNIQUE,
   services JSON NULL,
   working_hours JSON NULL,
@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS veterinarians (
 );
 
 -- ============================================================================
--- 2. RELACIONAMENTOS E VÍNCULOS
+-- 2. RELACIONAMENTOS E VÃNCULOS
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS clinic_veterinarians (
@@ -107,7 +107,7 @@ CREATE TABLE IF NOT EXISTS pet_ownership_history (
 );
 
 -- ============================================================================
--- 4. ATENDIMENTOS E SAÚDE
+-- 4. ATENDIMENTOS E SAÃšDE
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS appointments (
@@ -205,7 +205,7 @@ CREATE TABLE IF NOT EXISTS referrals (
 );
 
 -- ============================================================================
--- 5. COMUNICAÇÃO E SUPORTE
+-- 5. COMUNICAÃ‡ÃƒO E SUPORTE
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS notifications (
@@ -242,3 +242,4 @@ CREATE TABLE IF NOT EXISTS vet_passes (
   CONSTRAINT fk_vet_passes_pet FOREIGN KEY (pet_id) REFERENCES pets(id) ON DELETE CASCADE,
   CONSTRAINT fk_vet_passes_redeemed_by FOREIGN KEY (redeemed_by_user_id) REFERENCES users(id) ON DELETE SET NULL
 );
+

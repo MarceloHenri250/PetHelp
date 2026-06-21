@@ -197,7 +197,7 @@ export default function MedicalHistoryScreen() {
       console.error('Falha ao salvar registro medico:', error);
       setFeedback({
         type: 'error',
-        message: 'Nao foi possivel salvar o registro medico.',
+        message: 'Não foi possível salvar o registro médico.',
       });
     }
   };
@@ -435,7 +435,7 @@ export default function MedicalHistoryScreen() {
                         <span className="font-medium text-foreground">{record.date}</span>
                         {record.clinicName && (
                           <>
-                            <span>�</span>
+                            <span> </span>
                             <span>{record.clinicName}</span>
                           </>
                         )}
@@ -493,7 +493,7 @@ export default function MedicalHistoryScreen() {
                                 <div key={attachment.raw} className="rounded-2xl border border-border bg-muted/30 p-4">
                                   <p className="text-sm text-foreground break-words">{fileName}</p>
                                   <p className="mt-1 text-xs text-muted-foreground">
-                                    {fileType} � {bytesToLabel(fileSize)}
+                                    {fileType}   {bytesToLabel(fileSize)}
                                   </p>
                                   <div className="mt-3 flex flex-wrap gap-2">
                                     <button
@@ -574,4 +574,5 @@ export default function MedicalHistoryScreen() {
     </div>
   );
 }
+
 

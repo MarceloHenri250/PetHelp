@@ -9,7 +9,7 @@ import { useAppNavigation } from '../navigation';
 export default function PetProfileScreen() {
   const navigate = useNavigate();
   const { user } = useSession();
-  const { currentPet, deletePet, transferPetOwnership } = usePets();
+  const { currentPet, deletePet } = usePets();
   const { medicalRecords, vaccines } = useHealth();
   const { goToDashboard } = useAppNavigation();
 
@@ -74,27 +74,7 @@ export default function PetProfileScreen() {
                       <Edit className="w-5 h-5" />
                     </button>
                     <button
-                      onClick={async () => {
-                        if (!currentPet) return;
-                        const targetTutorEmail = prompt('Digite o e-mail do tutor que recebera o pet');
-                        if (!targetTutorEmail) return;
-                        const securityConfirmation = prompt('Digite TRANSFERIR para confirmar a operacao');
-                        if (!securityConfirmation) return;
-                        const petNameConfirmation = prompt(`Digite exatamente o nome de ${currentPet.name} para validar a transferencia`);
-                        if (!petNameConfirmation) return;
-
-                        try {
-                          await transferPetOwnership(currentPet.id, {
-                            targetTutorEmail,
-                            securityConfirmation,
-                            petNameConfirmation,
-                          });
-                          navigate(getDashboardRouteForUserType(user?.userType), { replace: true });
-                        } catch (err) {
-                          console.error('Erro ao transferir titularidade:', err);
-                          alert('Não foi possível transferir a titularidade deste pet.');
-                        }
-                      }}
+                      onClick={() => navigate('/pet-transfer')}
                       className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1.5 text-sm text-foreground hover:bg-muted transition-colors"
                       title="Transferir titularidade"
                     >

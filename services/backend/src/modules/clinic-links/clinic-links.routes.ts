@@ -363,4 +363,36 @@ router.post('/:id/accept', async (req, res, next) => {
   await updateVeterinarianLinkStatus(req, res, next, 'approved');
 });
 
+router.delete('/:id', async (req: AuthRequest, res, next) => {
+  try {
+    const veterinarianId = await getCurrentVeterinarianId(req.user);
+    if (!veterinarianId) {
+      res.status(403).json({ message: 'Forbidden' });
+      return;
+    }
+
+    const linkId = String(req.params.id);
+    const [rows] = await pool.query<ClinicVeterinarianRow[]>(
+      'SELECT * FROM clinic_veterinarians WHERE id = ? LIMIT 1',
+      [linkId]
+    );
+
+    const link = rows[0];
+    if (!link) {
+      res.status(404).json({ message: 'Request not found' });
+      return;
+    }
+
+    if (link.veterinarian_id !== veterinarianId) {
+      res.status(403).json({ message: 'Forbidden' });
+      return;
+    }
+
+    await pool.execute('DELETE FROM clinic_veterinarians WHERE id = ?', [linkId]);
+    res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;

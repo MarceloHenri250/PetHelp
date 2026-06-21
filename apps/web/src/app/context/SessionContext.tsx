@@ -26,11 +26,14 @@ interface SessionContextValue {
     address?: string;
     services?: string[] | null;
     workingHours?: Record<string, unknown> | null;
+    language?: string | null;
   }) => Promise<User>;
   updateVeterinarianProfile: (payload: {
     name?: string;
+    email?: string;
     crmv?: string;
     crmvUf?: string;
+    specialty?: string;
     phone?: string | null;
   }) => Promise<User>;
   deleteCurrentUserAccount: () => Promise<void>;
@@ -188,6 +191,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     address?: string;
     services?: string[] | null;
     workingHours?: Record<string, unknown> | null;
+    language?: string | null;
   }) => {
     const resp = await fetch(`${API_BASE}/api/users/clinic/me`, {
       method: 'PATCH',
@@ -210,8 +214,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const updateVeterinarianProfile = async (payload: {
     name?: string;
+    email?: string;
     crmv?: string;
     crmvUf?: string;
+    specialty?: string;
     phone?: string | null;
   }) => {
     const resp = await fetch(`${API_BASE}/api/users/veterinarian/me`, {
@@ -279,3 +285,4 @@ export function useSession() {
   }
   return context;
 }
+

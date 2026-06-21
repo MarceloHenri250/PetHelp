@@ -241,11 +241,12 @@ router.patch('/veterinarian/me', requireAuth, async (req: AuthRequest, res, next
 
     const body = req.body ?? {};
     const name = asTrimmedString(body.name);
+    const email = asTrimmedString(body.email).toLowerCase();
     const crmv = asTrimmedString(body.crmv);
     const crmvUf = asTrimmedString(body.crmvUf || body.crmv_uf).toUpperCase();
     const phone = body.phone !== undefined ? asTrimmedString(body.phone) || null : undefined;
 
-    if (!name && !crmv && !crmvUf && body.phone === undefined) {
+    if (!name && !email && !crmv && !crmvUf && body.phone === undefined) {
       res.status(400).json({ message: 'No fields provided to update' });
       return;
     }
@@ -255,6 +256,7 @@ router.patch('/veterinarian/me', requireAuth, async (req: AuthRequest, res, next
       req.user.id,
       {
         name: name || undefined,
+        email: email || undefined,
         crmv: crmv || undefined,
         crmv_uf: crmvUf || undefined,
         phone,

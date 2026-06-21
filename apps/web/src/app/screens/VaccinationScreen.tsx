@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { ArrowLeft, Plus, Syringe, Calendar, Trash2, Pencil, X, CheckCircle, AlertCircle } from 'lucide-react';
 import { useHealth } from '../context/HealthContext';
@@ -170,7 +170,7 @@ export default function VaccinationScreen() {
                   type="text"
                   value={clinicName}
                   onChange={(e) => setClinicName(e.target.value)}
-                  placeholder="Ex: Clí­nica PetHelp"
+                  placeholder="Ex: Clínica PetHelp"
                   className="w-full px-4 py-3 bg-input border-2 border-border rounded-xl text-foreground focus:border-primary focus:outline-none"
                 />
               </div>

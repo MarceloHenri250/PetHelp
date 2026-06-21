@@ -125,7 +125,9 @@ export interface User {
   name: string;
   email: string;
   userType: UserType;
+  specialty?: string;
   clinicName?: string;
+  language?: string;
   cnpj?: string;
   address?: string;
   phone?: string;
@@ -203,7 +205,9 @@ export function mapProfileToUser(profile: any): User {
     name: profile.name,
     email: profile.email,
     userType: mapApiUserTypeToUi(profile.user_type),
+    specialty: profile.specialty ?? profile.specialty_name ?? undefined,
     clinicName: profile.clinic_name ?? undefined,
+    language: profile.language ?? undefined,
     cnpj: profile.cnpj ?? undefined,
     address: profile.address ?? undefined,
     phone: profile.phone ?? undefined,
@@ -424,7 +428,4 @@ export function getSettingsRouteForUserType(userType?: UserType | null) {
   if (userType === 'veterinarian') return '/veterinarian-settings';
   return '/settings';
 }
-
-
-
 

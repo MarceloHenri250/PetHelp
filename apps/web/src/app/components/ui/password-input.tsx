@@ -1,22 +1,18 @@
-import * as React from 'react';
+﻿import * as React from 'react';
 import { Eye, EyeOff, Lock } from 'lucide-react';
-
-import { cn } from './utils';
 
 type PasswordInputProps = React.ComponentProps<'input'>;
 
 export function PasswordInput({ className, ...props }: PasswordInputProps) {
   const [visible, setVisible] = React.useState(false);
+  const inputClassName = ['auth-input', 'auth-input-password', className].filter(Boolean).join(' ');
 
   return (
-    <div className="relative">
-      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+    <div className="auth-input-wrap">
+      <Lock className="auth-icon" size={18} />
       <input
         data-slot="password-input"
-        className={cn(
-          'w-full pl-12 pr-12 py-3 bg-input border-2 border-border rounded-2xl focus:border-primary focus:outline-none transition-colors text-foreground',
-          className,
-        )}
+        className={inputClassName}
         {...props}
         type={visible ? 'text' : 'password'}
       />
@@ -24,10 +20,11 @@ export function PasswordInput({ className, ...props }: PasswordInputProps) {
         type="button"
         onClick={() => setVisible((current) => !current)}
         aria-label={visible ? 'Ocultar senha' : 'Exibir senha'}
-        className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+        className="auth-password-toggle"
       >
-        {visible ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+        {visible ? <EyeOff size={18} /> : <Eye size={18} />}
       </button>
     </div>
   );
 }
+

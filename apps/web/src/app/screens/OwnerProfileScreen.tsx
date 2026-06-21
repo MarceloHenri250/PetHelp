@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import {
   ArrowLeft,
@@ -92,13 +92,13 @@ export default function OwnerProfileScreen() {
 
       setFeedback({
         type: 'success',
-        message: 'Configuracoes salvas com sucesso.',
+        message: 'Configurações salvas com sucesso.',
       });
     } catch (error) {
       console.error('Falha ao atualizar perfil:', error);
       setFeedback({
         type: 'error',
-        message: 'Nao foi possivel atualizar as configuracoes.',
+        message: 'Não foi possível atualizar as configurações.',
       });
     } finally {
       setSaving(false);
@@ -109,7 +109,7 @@ export default function OwnerProfileScreen() {
     if (deleteConfirmation.trim().toUpperCase() !== 'EXCLUIR') {
       setFeedback({
         type: 'error',
-        message: 'Digite EXCLUIR para confirmar a remocao da conta.',
+        message: 'Digite EXCLUIR para confirmar a remoção da conta.',
       });
       return;
     }
@@ -146,7 +146,7 @@ export default function OwnerProfileScreen() {
           </button>
 
           <div className="text-right">
-            <p className="text-sm text-muted-foreground">Configuracoes do tutor</p>
+            <p className="text-sm text-muted-foreground">Configurações do tutor</p>
             <p className="text-foreground">{user?.name || 'Conta do tutor'}</p>
           </div>
         </div>
@@ -159,8 +159,8 @@ export default function OwnerProfileScreen() {
               <Settings className="w-7 h-7 text-primary" />
             </div>
             <div>
-              <h1 className="text-2xl text-foreground">Configuracoes da conta</h1>
-              <p className="text-muted-foreground">Edite seus dados e gerencie sua experiencia no sistema.</p>
+              <h1 className="text-2xl text-foreground">Configurações da conta</h1>
+              <p className="text-muted-foreground">Edite seus dados e gerencie sua experiência no sistema.</p>
             </div>
           </div>
 
@@ -244,7 +244,7 @@ export default function OwnerProfileScreen() {
                 className="inline-flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-white px-5 py-3 rounded-2xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Save className="w-4 h-4" />
-                {saving ? 'Salvando...' : 'Salvar configuracoes'}
+                {saving ? 'Salvando...' : 'Salvar configurações'}
               </button>
             </div>
           </form>
@@ -257,15 +257,15 @@ export default function OwnerProfileScreen() {
             </div>
             <div>
               <h2 className="text-2xl text-foreground">Idioma do sistema</h2>
-              <p className="text-muted-foreground">A personalizacao de idioma sera liberada em breve.</p>
+              <p className="text-muted-foreground">A personalização de idioma sera liberada em breve.</p>
             </div>
           </div>
 
           <div className="rounded-2xl border border-dashed border-border bg-muted/40 p-5">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-foreground mb-1">Portuguese (Brasil)</p>
-                <p className="text-sm text-muted-foreground">Em breve voce podera alternar entre os idiomas disponiveis.</p>
+                <p className="text-foreground mb-1">Português (Brasil)</p>
+                <p className="text-sm text-muted-foreground">Em breve você podera alternar entre os idiomas disponíveis.</p>
               </div>
               <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs text-primary">
                 Em breve
@@ -273,7 +273,7 @@ export default function OwnerProfileScreen() {
             </div>
 
             <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {['Portuguese (Brasil)', 'English', 'Espanol'].map((language, index) => (
+              {['Português (Brasil)', 'English', 'Espanhol'].map((language, index) => (
                 <button
                   key={language}
                   type="button"
@@ -299,7 +299,7 @@ export default function OwnerProfileScreen() {
             </div>
             <div>
               <h2 className="text-2xl text-red-700">Zona de perigo</h2>
-              <p className="text-red-600/80">A exclusao da conta remove permanentemente seus dados de acesso.</p>
+              <p className="text-red-600/80">A exclusão da conta remove permanentemente seus dados de acesso.</p>
             </div>
           </div>
 
@@ -307,7 +307,7 @@ export default function OwnerProfileScreen() {
             <div>
               <p className="text-red-700 mb-1">Excluir conta</p>
               <p className="text-sm text-red-600/80">
-                Seus pets vinculados permanecem no sistema sem tutor. Se houver registros dependentes, a exclusao pode ser bloqueada.
+                Seus pets vinculados permanecem no sistema sem tutor. Se houver registros dependentes, a exclusão pode ser bloqueada.
               </p>
             </div>
 
@@ -335,9 +335,9 @@ export default function OwnerProfileScreen() {
       >
         <AlertDialogContent className="max-w-lg">
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar exclusao da conta</AlertDialogTitle>
+            <AlertDialogTitle>Confirmar exclusão da conta</AlertDialogTitle>
             <AlertDialogDescription>
-              Digite EXCLUIR para confirmar. Seus pets continuarao no sistema sem tutor, e quaisquer dependencias podem impedir a exclusao.
+              Digite EXCLUIR para confirmar. Seus pets continuarao no sistema sem tutor, e quaisquer dependencias podem impedir a exclusão.
             </AlertDialogDescription>
           </AlertDialogHeader>
 

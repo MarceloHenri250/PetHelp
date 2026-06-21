@@ -4,6 +4,7 @@ import { getDashboardRouteForUserType } from '../context/shared';
 import { usePets } from '../context/PetsContext';
 import { useSession } from '../context/SessionContext';
 import { useAppNavigation, useDashboardBackLogout } from '../navigation';
+import { ScreenFrame, ScreenHeader, ScreenPanel, ScreenStat } from '../components/layout/ScreenFrame';
 
 export default function DashboardScreen() {
   const navigate = useNavigate();
@@ -18,111 +19,106 @@ export default function DashboardScreen() {
 
   if (!currentPet) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-        <div className="text-center">
-          <p className="text-gray-600 mb-4">Nenhum pet cadastrado ainda</p>
-          <button
-            onClick={() => navigate('/pet-registration')}
-            className="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-2xl transition-colors"
-          >
-            Adicionar Seu Pet
-          </button>
+      <ScreenFrame>
+        <div className="app-page-shell flex items-center justify-center py-20">
+          <ScreenPanel className="max-w-xl px-8 py-10 text-center">
+            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-3xl bg-primary/10 text-primary">
+              <PawPrint className="h-8 w-8" />
+            </div>
+            <h2 className="text-2xl font-medium text-foreground">Nenhum pet cadastrado ainda</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Cadastre um pet para acessar vacinação, histórico médico e consultas.
+            </p>
+            <button onClick={() => navigate('/pet-registration')} className="app-button-primary mt-8">
+              Adicionar seu pet
+            </button>
+          </ScreenPanel>
         </div>
-      </div>
+      </ScreenFrame>
     );
   }
 
   const menuItems = [
-    {
-      icon: Syringe,
-      label: 'Vacinas',
-      path: '/vaccines',
-      color: 'bg-blue-500',
-    },
-    {
-      icon: FileText,
-      label: 'Histórico Médico',
-      path: '/medical-history',
-      color: 'bg-purple-500',
-    },
-    {
-      icon: Calendar,
-      label: 'Consultas',
-      path: '/appointments',
-      color: 'bg-orange-500',
-    },
+    { icon: Syringe, label: 'Vacinas', path: '/vaccines' },
+    { icon: FileText, label: 'Histórico Médico', path: '/medical-history' },
+    { icon: Calendar, label: 'Consultas', path: '/appointments' },
     {
       icon: User,
       label: user?.userType === 'owner' ? 'Configurações' : 'Perfil',
       path: user?.userType === 'owner' ? '/settings' : getDashboardRouteForUserType(user?.userType),
-      color: 'bg-green-500',
     },
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-50 to-white pb-6">
-      <div className="bg-green-500 rounded-b-[40px] px-6 pt-12 pb-8 shadow-lg">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h2 className="text-white/80">Bem-vindo de volta,</h2>
-            <h1 className="text-white text-2xl">{user?.name}</h1>
-          </div>
-          <button
-            onClick={handleLogout}
-            className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 transition-colors"
-            title="Sair"
-          >
-            <LogOut className="w-5 h-5 text-white" />
-          </button>
-        </div>
+    <ScreenFrame>
+      <div className="app-page-shell space-y-6">
+        <ScreenHeader
+          eyebrow="Painel do tutor"
+          title={`Olá, ${user?.name ?? 'usuário'}`}
+          description="Centralize pet, vacinação, histórico e consultas em uma experiência mais limpa e sofisticada."
+          icon={<PawPrint className="h-5 w-5" />}
+          actions={
+            <button onClick={handleLogout} className="app-button-secondary" title="Sair">
+              <LogOut className="h-4 w-4" />
+              Sair
+            </button>
+          }
+        />
 
-        <div className="bg-white rounded-3xl p-6 shadow-xl">
-          <div className="flex items-center gap-4">
-            {currentPet.photo ? (
-              <img src={currentPet.photo} alt={currentPet.name} className="w-24 h-24 rounded-full object-cover" />
-            ) : (
-              <div className="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center">
-                <PawPrint className="w-10 h-10 text-gray-400" />
-              </div>
-            )}
-            <div className="flex-1">
-              <h2 className="text-2xl text-gray-800 mb-2">{currentPet.name}</h2>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div>
-                  <p className="text-gray-500">Raça</p>
-                  <p className="text-gray-800">{currentPet.breed || 'Não informada'}</p>
+        <ScreenPanel className="p-6 sm:p-8">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center">
+            <div className="relative shrink-0">
+              {currentPet.photo ? (
+                <img src={currentPet.photo} alt={currentPet.name} className="h-28 w-28 rounded-[28px] object-cover border border-border" />
+              ) : (
+                <div className="flex h-28 w-28 items-center justify-center rounded-[28px] border border-border bg-muted/40">
+                  <PawPrint className="h-12 w-12 text-muted-foreground" />
                 </div>
-                <div>
-                  <p className="text-gray-500">Idade</p>
-                  <p className="text-gray-800">{currentPet.age || 'Não informada'}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500">Peso</p>
-                  <p className="text-gray-800">{currentPet.weight || 'Não informado'}</p>
-                </div>
+              )}
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <h2 className="text-2xl font-medium text-foreground">{currentPet.name}</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {currentPet.species ? `${currentPet.species} • ` : ''}
+                {currentPet.breed || 'Raça não informada'}
+              </p>
+
+              <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <ScreenStat label="Raça">{currentPet.breed || 'Não informada'}</ScreenStat>
+                <ScreenStat label="Idade">{currentPet.age || 'Não informada'}</ScreenStat>
+                <ScreenStat label="Peso">{currentPet.weight || 'Não informado'}</ScreenStat>
               </div>
             </div>
           </div>
-        </div>
-      </div>
+        </ScreenPanel>
 
-      <div className="px-6 mt-8">
-        <h3 className="text-gray-700 text-lg mb-4">Acesso Rápido</h3>
-        <div className="grid grid-cols-2 gap-4">
-          {menuItems.map((item) => (
-            <button
-              key={item.label}
-              onClick={() => navigate(item.path)}
-              className="bg-white rounded-3xl p-6 shadow-lg hover:shadow-xl transition-shadow flex flex-col items-center gap-3"
-            >
-              <div className={`${item.color} w-14 h-14 rounded-full flex items-center justify-center`}>
-                <item.icon className="w-7 h-7 text-white" />
-              </div>
-              <span className="text-gray-800">{item.label}</span>
-            </button>
-          ))}
-        </div>
+        <section className="space-y-4">
+          <div>
+            <h3 className="text-xl font-medium text-foreground">Acesso rápido</h3>
+            <p className="mt-1 text-sm text-muted-foreground">Atalhos diretos para as funções mais usadas.</p>
+          </div>
+
+          <div className="app-grid-tiles">
+            {menuItems.map((item) => (
+              <button
+                key={item.label}
+                onClick={() => navigate(item.path)}
+                className="group rounded-[28px] border border-border/80 bg-card p-6 text-left shadow-[0_18px_50px_-36px_rgba(127,162,106,0.24)] transition-all hover:-translate-y-0.5 hover:shadow-[0_22px_56px_-38px_rgba(127,162,106,0.28)]"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="app-icon-badge">
+                    <item.icon className="h-6 w-6" />
+                  </div>
+                  <span className="rounded-full bg-muted/70 px-3 py-1 text-xs text-muted-foreground">Abrir</span>
+                </div>
+                <p className="mt-5 text-lg font-medium text-foreground">{item.label}</p>
+                <p className="mt-1 text-sm text-muted-foreground">Ir para essa área do sistema.</p>
+              </button>
+            ))}
+          </div>
+        </section>
       </div>
-    </div>
+    </ScreenFrame>
   );
 }

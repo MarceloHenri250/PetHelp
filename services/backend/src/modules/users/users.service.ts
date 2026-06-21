@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+﻿import { randomUUID } from 'node:crypto';
 import type { PoolConnection } from 'mysql2/promise';
 import type { RowDataPacket } from 'mysql2';
 import { pool } from '../../db/index.js';
@@ -33,7 +33,7 @@ type ClinicRow = RowDataPacket & {
   corporate_name: string | null;
   cnpj: string | null;
   phone: string | null;
-  address: string;
+  address: string | null;
   connection_code: string | null;
   services: string | null;
   working_hours: string | null;
@@ -76,7 +76,7 @@ export type CreateClinicProfileInput = {
   corporate_name?: string | null;
   cnpj?: string | null;
   phone?: string | null;
-  address: string;
+  address: string | null;
   connection_code?: string | null;
   services?: string | null;
   working_hours?: string | null;
@@ -101,6 +101,7 @@ export type CreateVeterinarianProfileInput = {
 
 export type UpdateVeterinarianProfileInput = {
   name?: string;
+  email?: string;
   crmv?: string;
   crmv_uf?: string;
   phone?: string | null;
@@ -301,6 +302,10 @@ export async function updateVeterinarianProfile(userId: string, input: UpdateVet
   if (input.name !== undefined) {
     assignments.push('name = ?');
     values.push(input.name);
+  }
+
+  if (input.email !== undefined) {
+    await client.execute(`UPDATE users SET email = ? WHERE id = ?`, [input.email, userId]);
   }
 
   if (input.crmv !== undefined) {
@@ -509,3 +514,4 @@ export async function listTutorProfiles() {
   const profiles = await Promise.all(rows.map(row => getUserProfileById(row.id)));
   return profiles.filter((profile): profile is PublicUserRecord => profile !== null);
 }
+

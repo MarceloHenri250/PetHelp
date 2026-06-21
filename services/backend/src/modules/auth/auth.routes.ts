@@ -58,7 +58,7 @@ router.post('/register', async (req, res, next) => {
     const tradeName = asTrimmedString(body.tradeName) || asTrimmedString(body.clinicName) || name;
     const corporateName = asTrimmedString(body.corporateName) || null;
     const cnpj = asTrimmedString(body.cnpj) || null;
-    const address = asTrimmedString(body.address);
+    const address = asTrimmedString(body.address) || null;
     const connectionCode = asTrimmedString(body.connectionCode) || asTrimmedString(body.connection_code) || null;
     const services = Array.isArray(body.services)
       ? JSON.stringify(body.services.map((service: unknown) => asTrimmedString(service)).filter(Boolean))
@@ -83,11 +83,6 @@ router.post('/register', async (req, res, next) => {
 
     if (userType === 'clinic' && !tradeName) {
       res.status(400).json({ message: 'tradeName or clinicName is required for clinic registration' });
-      return;
-    }
-
-    if (userType === 'clinic' && !address) {
-      res.status(400).json({ message: 'address is required for clinic registration' });
       return;
     }
 
@@ -277,3 +272,4 @@ router.post('/password-recovery/confirm', async (req, res, next) => {
 });
 
 export default router;
+

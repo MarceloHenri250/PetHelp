@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { ArrowLeft, Link as LinkIcon, QrCode, Check } from 'lucide-react';
 import { getDashboardRouteForUserType } from '../context/shared';
@@ -27,7 +27,7 @@ export default function ConnectionScreen() {
         navigate(getDashboardRouteForUserType(user?.userType), { replace: true });
       }, 2000);
     } catch (error) {
-      console.error('Falha na conexÃ£o:', error);
+      console.error('Falha na conexão:', error);
     } finally {
       setLoading(false);
     }
@@ -52,9 +52,9 @@ export default function ConnectionScreen() {
           <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
             <LinkIcon className="w-10 h-10 text-primary" />
           </div>
-          <h1 className="text-3xl text-foreground mb-2">Vincular Ã  ClÃ­nica</h1>
+          <h1 className="text-3xl text-foreground mb-2">Vincular à Clínica</h1>
           <p className="text-muted-foreground">
-            Conecte {currentPet?.name || 'seu pet'} a uma clÃ­nica parceira
+            Conecte {currentPet?.name || 'seu pet'} usando o código fornecido pela clínica
           </p>
         </div>
 
@@ -65,7 +65,7 @@ export default function ConnectionScreen() {
             </div>
             <h2 className="text-2xl text-foreground mb-2">Conectado com Sucesso!</h2>
             <p className="text-muted-foreground">
-              Seu pet agora estÃ¡ vinculado Ã  clÃ­nica. Redirecionando...
+              Seu pet agora está vinculado à clínica. Redirecionando...
             </p>
           </div>
         ) : (
@@ -78,9 +78,9 @@ export default function ConnectionScreen() {
                     <span className="text-primary">1</span>
                   </div>
                   <div className="flex-1">
-                    <p className="text-foreground">Obtenha o cÃ³digo da clÃ­nica</p>
+                    <p className="text-foreground">Receba o código da clínica</p>
                     <p className="text-sm text-muted-foreground">
-                      PeÃ§a Ã  clÃ­nica veterinÃ¡ria parceira o seu cÃ³digo de conexÃ£o exclusivo
+                      A clínica exibe esse código no painel dela e compartilha com você
                     </p>
                   </div>
                 </div>
@@ -89,9 +89,9 @@ export default function ConnectionScreen() {
                     <span className="text-primary">2</span>
                   </div>
                   <div className="flex-1">
-                    <p className="text-foreground">Insira o cÃ³digo</p>
+                    <p className="text-foreground">Insira o código</p>
                     <p className="text-sm text-muted-foreground">
-                      Digite o cÃ³digo recebido no campo abaixo para estabelecer a conexÃ£o
+                      Digite o código recebido no campo abaixo para estabelecer a conexão
                     </p>
                   </div>
                 </div>
@@ -102,7 +102,7 @@ export default function ConnectionScreen() {
                   <div className="flex-1">
                     <p className="text-foreground">Pronto para partilhar</p>
                     <p className="text-sm text-muted-foreground">
-                      A partir de agora, os profissionais autorizados da clÃ­nica poderÃ£o visualizar o histÃ³rico do seu pet
+                      A partir de agora, os profissionais autorizados da clínica poderão visualizar o histórico do seu pet
                     </p>
                   </div>
                 </div>
@@ -111,7 +111,7 @@ export default function ConnectionScreen() {
 
             <div className="border-t border-border pt-6">
               <form onSubmit={handleConnect}>
-                <label className="block text-foreground mb-3">CÃ³digo de ConexÃ£o da ClÃ­nica</label>
+                <label className="block text-foreground mb-3">Código de Conexão da Clínica</label>
                 <div className="relative mb-6">
                   <QrCode className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                   <input
@@ -128,7 +128,7 @@ export default function ConnectionScreen() {
                   disabled={loading || !currentPet}
                   className="w-full bg-primary hover:bg-primary/90 text-white py-4 rounded-2xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {loading ? 'Conectando...' : 'Vincular ClÃ­nica'}
+                  {loading ? 'Conectando...' : 'Vincular Clínica'}
                 </button>
               </form>
             </div>
@@ -139,7 +139,7 @@ export default function ConnectionScreen() {
           <div className="bg-card rounded-2xl p-6 mt-6 border border-border">
             <h3 className="text-foreground mb-2">Vinculado Atualmente</h3>
             <p className="text-sm text-muted-foreground">
-              Este pet jÃ¡ possui um vÃ­nculo ativo com um estabelecimento
+              Este pet já possui um vínculo ativo com um estabelecimento
             </p>
           </div>
         )}
@@ -147,6 +147,7 @@ export default function ConnectionScreen() {
     </div>
   );
 }
+
 
 
 

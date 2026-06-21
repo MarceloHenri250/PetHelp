@@ -1,4 +1,4 @@
-import type { ComponentType, ReactNode } from 'react';
+﻿import type { ComponentType, ReactNode } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router';
 import { getDashboardRouteForUserType, type UserType } from './context/shared';
 import { useSession } from './context/SessionContext';
@@ -7,8 +7,10 @@ import RegisterScreen from './screens/RegisterScreen';
 import OwnerDashboardScreen from './screens/OwnerDashboardScreen';
 import ClinicDashboardScreen from './screens/ClinicDashboardScreen';
 import VeterinarianDashboardScreen from './screens/VeterinarianDashboardScreen';
+import VeterinarianScheduleScreen from './screens/VeterinarianScheduleScreen';
 import PetRegistrationScreen from './screens/PetRegistrationScreen';
 import PetProfileScreen from './screens/PetProfileScreen';
+import PetTransferScreen from './screens/PetTransferScreen';
 import MedicalHistoryScreen from './screens/MedicalHistoryScreen';
 import VaccinationScreen from './screens/VaccinationScreen';
 import ExamsScreen from './screens/ExamsScreen';
@@ -17,6 +19,7 @@ import NotificationsScreen from './screens/NotificationsScreen';
 import ConnectionScreen from './screens/ConnectionScreen';
 import OwnerProfileScreen from './screens/OwnerProfileScreen';
 import ClinicSettingsScreen from './screens/ClinicSettingsScreen';
+import ManageVeterinariansScreen from './screens/ManageVeterinariansScreen';
 import VeterinarianSettingsScreen from './screens/VeterinarianSettingsScreen';
 
 function PublicOnly({ children }: { children: ReactNode }) {
@@ -130,10 +133,18 @@ export const router = createBrowserRouter([
   {
     path: '/veterinarian-dashboard',
     Component: withAllowedUserTypes(VeterinarianDashboardScreen, ['veterinarian']),
+  },  {
+    path: '/veterinarian-schedule',
+    Component: withAllowedUserTypes(VeterinarianScheduleScreen, ['veterinarian']),
   },
+
   {
     path: '/pet-profile',
     Component: withAllowedUserTypes(PetProfileScreen, ['owner', 'veterinarian']),
+  },
+  {
+    path: '/pet-transfer',
+    Component: withAllowedUserTypes(PetTransferScreen, ['owner']),
   },
   {
     path: '/medical-history',
@@ -168,6 +179,10 @@ export const router = createBrowserRouter([
     Component: withAllowedUserTypes(ClinicSettingsScreen, ['clinic']),
   },
   {
+    path: '/clinic-veterinarians',
+    Component: withAllowedUserTypes(ManageVeterinariansScreen, ['clinic']),
+  },
+  {
     path: '/veterinarian-settings',
     Component: withAllowedUserTypes(VeterinarianSettingsScreen, ['veterinarian']),
   },
@@ -184,3 +199,6 @@ export const router = createBrowserRouter([
     Component: CatchAllRedirect,
   },
 ]);
+
+
+
