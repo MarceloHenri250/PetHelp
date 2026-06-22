@@ -133,6 +133,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         phone: payload.phone,
         crmv: payload.crmv,
         crmvUf: payload.crmvUf,
+        specialty: payload.specialty,
         corporateName: payload.corporateName,
         cnpj: payload.cnpj,
         connectionCode: payload.connectionCode,

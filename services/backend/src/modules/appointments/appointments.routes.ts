@@ -219,9 +219,29 @@ router.post('/', async (req: AuthRequest, res, next) => {
     const date = asTrimmedString(body.date ?? body.appointmentDate);
     const time = asTrimmedString(body.time ?? body.appointmentTime);
     const reason = asTrimmedString(body.reason);
+    const targetType = asTrimmedString(body.targetType).toLowerCase();
+    const clinicIdInput = asTrimmedString(body.clinicId);
+    const veterinarianIdInput = asTrimmedString(body.veterinarianId);
+    const clinicName = asTrimmedString(body.clinicName) || null;
+    const veterinarianName = asTrimmedString(body.veterinarianName) || null;
+    const veterinarianEmail = asTrimmedString(body.veterinarianEmail) || null;
+    const veterinarianPhone = asTrimmedString(body.veterinarianPhone) || null;
 
     if (!petId || !date || !time || !reason) {
       res.status(400).json({ message: 'petId, date, time and reason are required' });
+      return;
+    }
+
+    const resolvedTargetType = ['clinic', 'veterinarian'].includes(targetType)
+      ? targetType
+      : veterinarianIdInput
+        ? 'veterinarian'
+        : clinicIdInput
+          ? 'clinic'
+          : '';
+
+    if (!resolvedTargetType) {
+      res.status(400).json({ message: 'targetType, clinicId or veterinarianId are required' });
       return;
     }
 
@@ -233,16 +253,24 @@ router.post('/', async (req: AuthRequest, res, next) => {
 
     const tutorId = await resolveCurrentTutorId(req.user);
     const clinicId = await resolveCurrentClinicId(req.user);
-    const veterinarianId = asTrimmedString(body.veterinarianId);
-    const clinicName = asTrimmedString(body.clinicName) || null;
-    const veterinarianName = asTrimmedString(body.veterinarianName) || null;
-    const veterinarianEmail = asTrimmedString(body.veterinarianEmail) || null;
-    const veterinarianPhone = asTrimmedString(body.veterinarianPhone) || null;
     const explicitTutorId = asTrimmedString(body.tutorId);
     const nextTutorId = tutorId ?? (explicitTutorId || access.pet?.current_tutor_id || null);
 
     if (!nextTutorId) {
       res.status(400).json({ message: 'Tutor could not be resolved for appointment creation' });
+      return;
+    }
+
+    const nextClinicId = resolvedTargetType === 'veterinarian' ? null : (clinicId ?? clinicIdInput ?? null);
+    const nextVeterinarianId = resolvedTargetType === 'clinic' ? null : (veterinarianIdInput || null);
+
+    if (resolvedTargetType === 'clinic' && !nextClinicId) {
+      res.status(400).json({ message: 'clinicId is required for clinic appointments' });
+      return;
+    }
+
+    if (resolvedTargetType === 'veterinarian' && !nextVeterinarianId) {
+      res.status(400).json({ message: 'veterinarianId is required for veterinarian appointments' });
       return;
     }
 
@@ -273,12 +301,12 @@ router.post('/', async (req: AuthRequest, res, next) => {
         petId,
         access.pet?.name ?? (asTrimmedString(body.petName) || ''),
         nextTutorId,
-        veterinarianId || null,
-        clinicId ?? (asTrimmedString(body.clinicId) || null),
-        clinicName,
-        veterinarianName,
-        veterinarianEmail,
-        veterinarianPhone,
+        nextVeterinarianId,
+        nextClinicId,
+        resolvedTargetType === 'veterinarian' ? null : clinicName,
+        resolvedTargetType === 'clinic' ? null : veterinarianName,
+        resolvedTargetType === 'clinic' ? null : veterinarianEmail,
+        resolvedTargetType === 'clinic' ? null : veterinarianPhone,
         date,
         time,
         reason,

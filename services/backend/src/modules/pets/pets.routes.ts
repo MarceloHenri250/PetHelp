@@ -34,8 +34,8 @@ type DbClient = Pick<PoolConnection, 'execute' | 'query'>;
 
 const petSelectFields = `
   id,
-  current_tutor_id AS currentTutorId,
-  linked_clinic_id AS linkedClinicId,
+  current_tutor_id,
+  linked_clinic_id,
   name,
   species,
   breed,
@@ -44,9 +44,9 @@ const petSelectFields = `
   photo,
   allergies,
   conditions,
-  is_active AS isActive,
-  created_at AS createdAt,
-  updated_at AS updatedAt
+  is_active,
+  created_at,
+  updated_at
 `;
 
 function parseNullableJson(value: unknown): string | null {
@@ -623,4 +623,5 @@ petsRouter.post('/:id/link-clinic', async (req: AuthRequest, res, next) => {
     connection.release();
   }
 });
+
 

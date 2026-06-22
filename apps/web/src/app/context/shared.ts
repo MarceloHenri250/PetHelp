@@ -68,12 +68,13 @@ export interface Appointment {
   id: string;
   petId: string;
   petName: string;
-  clinicId: string;
-  clinicName: string;
-  veterinarianId?: string;
-  veterinarianName?: string;
-  veterinarianEmail?: string;
-  veterinarianPhone?: string;
+  clinicId?: string | null;
+  clinicName?: string | null;
+  veterinarianId?: string | null;
+  veterinarianName?: string | null;
+  veterinarianEmail?: string | null;
+  veterinarianPhone?: string | null;
+  targetType?: 'clinic' | 'veterinarian';
   date: string;
   time: string;
   reason: string;
@@ -151,6 +152,7 @@ export type RegisterPayload = {
   phone?: string;
   crmv?: string;
   crmvUf?: string;
+  specialty?: string;
   corporateName?: string;
   cnpj?: string;
   connectionCode?: string;

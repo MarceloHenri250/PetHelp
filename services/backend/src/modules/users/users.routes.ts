@@ -5,7 +5,9 @@ import {
   deleteUserProfile,
   getUserProfileByEmail,
   getUserProfileById,
+  listClinicProfiles,
   listTutorProfiles,
+  listVeterinarianProfiles,
   updateClinicProfile,
   updateVeterinarianProfile,
   updateTutorProfile,
@@ -54,6 +56,46 @@ router.get('/tutors', requireAuth, async (_req, res, next) => {
   try {
     const tutors = await listTutorProfiles();
     res.json({ data: tutors });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/catalog', requireAuth, async (req, res, next) => {
+  try {
+    const type = asTrimmedString(req.query.type).toLowerCase();
+    const query = asTrimmedString(req.query.query);
+    const specialty = asTrimmedString(req.query.specialty);
+
+    const shouldLoadClinics = type === '' || type === 'clinic' || type === 'all';
+    const shouldLoadVeterinarians = type === '' || type === 'veterinarian' || type === 'all';
+
+    const [clinics, veterinarians] = await Promise.all([
+      shouldLoadClinics ? listClinicProfiles(query) : Promise.resolve([]),
+      shouldLoadVeterinarians ? listVeterinarianProfiles(query, specialty) : Promise.resolve([]),
+    ]);
+
+    res.json({
+      data: [
+        ...clinics.map((clinic) => ({
+          id: clinic.id,
+          type: 'clinic' as const,
+          name: clinic.trade_name || clinic.name,
+          clinicName: clinic.trade_name || clinic.name,
+          connectionCode: clinic.connection_code,
+          address: clinic.address,
+          services: clinic.services,
+        })),
+        ...veterinarians.map((veterinarian) => ({
+          id: veterinarian.id,
+          type: 'veterinarian' as const,
+          name: veterinarian.name,
+          specialty: veterinarian.specialty,
+          crmv: veterinarian.crmv,
+          crmvUf: veterinarian.crmv_uf,
+        })),
+      ],
+    });
   } catch (err) {
     next(err);
   }
@@ -244,9 +286,10 @@ router.patch('/veterinarian/me', requireAuth, async (req: AuthRequest, res, next
     const email = asTrimmedString(body.email).toLowerCase();
     const crmv = asTrimmedString(body.crmv);
     const crmvUf = asTrimmedString(body.crmvUf || body.crmv_uf).toUpperCase();
+    const specialty = body.specialty !== undefined ? asTrimmedString(body.specialty) || null : undefined;
     const phone = body.phone !== undefined ? asTrimmedString(body.phone) || null : undefined;
 
-    if (!name && !email && !crmv && !crmvUf && body.phone === undefined) {
+    if (!name && !email && !crmv && !crmvUf && body.specialty === undefined && body.phone === undefined) {
       res.status(400).json({ message: 'No fields provided to update' });
       return;
     }
@@ -259,6 +302,7 @@ router.patch('/veterinarian/me', requireAuth, async (req: AuthRequest, res, next
         email: email || undefined,
         crmv: crmv || undefined,
         crmv_uf: crmvUf || undefined,
+        specialty,
         phone,
       },
       connection

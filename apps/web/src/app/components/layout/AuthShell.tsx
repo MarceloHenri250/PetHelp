@@ -103,6 +103,12 @@ const AUTH_STYLES = `
     transition: all 180ms ease;
   }
 
+  .auth-role-button svg {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 auto;
+  }
+
   .auth-role-button:hover {
     border-color: rgba(127, 162, 106, 0.6);
   }
@@ -188,9 +194,10 @@ const AUTH_STYLES = `
     border: 1px solid #d8d1c6;
     background: #efe9de;
     color: #1a1a1a;
-    padding: 14px 16px 14px 44px;
+    padding: 14px 18px 14px 50px;
     font: inherit;
     font-size: 16px;
+    line-height: 1.25;
     outline: none;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
     transition: all 180ms ease;
@@ -211,8 +218,8 @@ const AUTH_STYLES = `
   }
 
   .auth-input-password {
-    padding-left: 44px;
-    padding-right: 48px;
+    padding-left: 50px;
+    padding-right: 52px;
   }
 
   .auth-input-center {
@@ -223,23 +230,28 @@ const AUTH_STYLES = `
 
   .auth-icon {
     position: absolute;
-    left: 14px;
+    left: 16px;
     top: 50%;
-    transform: translateY(-52%);
+    width: 18px;
+    height: 18px;
+    transform: translateY(-50%);
     color: #877a6d;
     pointer-events: none;
   }
 
   .auth-password-toggle {
     position: absolute;
-    right: 14px;
+    right: 16px;
     top: 50%;
-    transform: translateY(-52%);
+    width: 18px;
+    height: 18px;
+    transform: translateY(-50%);
     border: 0;
     background: transparent;
     color: #877a6d;
     cursor: pointer;
     padding: 0;
+    line-height: 0;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -249,18 +261,20 @@ const AUTH_STYLES = `
     appearance: none;
     border: 0;
     width: 100%;
-    min-height: 60px;
+    min-height: 58px;
     border-radius: 18px;
     background: #7fa26a;
     color: #ffffff;
     font: inherit;
-    font-size: 19px;
+    font-size: 18px;
     font-weight: 500;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
+    gap: 8px;
+    padding: 0 20px;
+    line-height: 1;
     box-shadow: 0 18px 38px -18px rgba(127, 162, 106, 0.45);
     transition: all 180ms ease;
   }
@@ -271,6 +285,9 @@ const AUTH_STYLES = `
   }
 
   .auth-button-primary svg {
+    display: block;
+    width: 18px;
+    height: 18px;
     flex: 0 0 auto;
   }
 
@@ -321,6 +338,29 @@ const AUTH_STYLES = `
     border-color: #f3c0be;
     background: #fff1f0;
     color: #b33d36;
+  }
+
+  .auth-code-box {
+    margin-bottom: 14px;
+    border-radius: 18px;
+    border: 1px solid rgba(127, 162, 106, 0.32);
+    background: rgba(127, 162, 106, 0.08);
+    padding: 13px 16px;
+    color: #215f49;
+  }
+
+  .auth-code-label {
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  .auth-code-value {
+    margin-top: 4px;
+    font-family: 'DM Mono', monospace;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    word-break: break-all;
   }
 
   .auth-footer {

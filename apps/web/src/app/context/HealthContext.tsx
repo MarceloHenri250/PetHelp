@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+ï»¿import React, { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { useInteraction } from './InteractionContext';
 import { usePets } from './PetsContext';
 import { useSession } from './SessionContext';
@@ -38,7 +38,7 @@ function daysUntil(dateText: string) {
 export function HealthProvider({ children }: { children: ReactNode }) {
   const { currentPet } = usePets();
   const { user } = useSession();
-  const { addNotification } = useInteraction();
+  const { addNotification, notifications } = useInteraction();
   const [medicalRecords, setMedicalRecords] = useState<MedicalRecord[]>([]);
   const [vaccines, setVaccines] = useState<Vaccine[]>([]);
   const API_BASE = getApiBase();
@@ -104,13 +104,17 @@ export function HealthProvider({ children }: { children: ReactNode }) {
       if (remainingDays > 30) continue;
 
       const sourceKey = `vaccine-reminder:${vaccine.id}`;
+      if (notifications.some((notification) => notification.userId === user.id && notification.sourceKey === sourceKey)) {
+        continue;
+      }
+
       addNotification({
         userId: user.id,
         type: 'vaccine',
-        title: remainingDays < 0 ? 'Vacina vencida' : 'Vacina próxima do vencimento',
+        title: remainingDays < 0 ? 'Vacina vencida' : 'Vacina prÃ³xima do vencimento',
         message:
           remainingDays < 0
-            ? `${vaccine.name} está atrasada para ${currentPet.name}.`
+            ? `${vaccine.name} estÃ¡ atrasada para ${currentPet.name}.`
             : `${vaccine.name} vence em ${Math.max(remainingDays, 0)} dia(s) para ${currentPet.name}.`,
         date: new Date().toISOString().slice(0, 10),
         read: false,
@@ -118,7 +122,7 @@ export function HealthProvider({ children }: { children: ReactNode }) {
         sourceKey,
       });
     }
-  }, [addNotification, currentPet?.id, currentPet?.name, user?.id, vaccines]);
+  }, [addNotification, currentPet?.id, currentPet?.name, notifications, user?.id, vaccines]);
 
   const addMedicalRecord = async (record: Omit<MedicalRecord, 'id'>) => {
     if (!currentPet?.id) {
@@ -259,3 +263,4 @@ export function useHealth() {
   }
   return context;
 }
+

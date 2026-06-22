@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import { useSession } from './SessionContext';
 import { getApiBase, getAuthHeaders, type Appointment, type Notification } from './shared';
 
@@ -22,12 +22,13 @@ function toUiAppointment(item: any): Appointment {
     id: item.id,
     petId: item.petId ?? item.pet_id,
     petName: item.petName ?? item.pet_name ?? '',
-    clinicId: item.clinicId ?? item.clinic_id ?? '',
-    clinicName: item.clinicName ?? item.clinic_name ?? '',
-    veterinarianId: item.veterinarianId ?? item.veterinarian_id ?? undefined,
-    veterinarianName: item.veterinarianName ?? item.veterinarian_name ?? undefined,
-    veterinarianEmail: item.veterinarianEmail ?? item.veterinarian_email ?? undefined,
-    veterinarianPhone: item.veterinarianPhone ?? item.veterinarian_phone ?? undefined,
+    clinicId: item.clinicId ?? item.clinic_id ?? null,
+    clinicName: item.clinicName ?? item.clinic_name ?? null,
+    veterinarianId: item.veterinarianId ?? item.veterinarian_id ?? null,
+    veterinarianName: item.veterinarianName ?? item.veterinarian_name ?? null,
+    veterinarianEmail: item.veterinarianEmail ?? item.veterinarian_email ?? null,
+    veterinarianPhone: item.veterinarianPhone ?? item.veterinarian_phone ?? null,
+    targetType: item.targetType ?? (item.veterinarianId ?? item.veterinarian_id ? 'veterinarian' : 'clinic'),
     date: item.date ?? item.appointment_date ?? '',
     time: item.time ?? item.appointment_time ?? '',
     reason: item.reason ?? '',
@@ -136,7 +137,7 @@ export function InteractionProvider({ children }: { children: ReactNode }) {
         sourceKey: `appointment-created:${created.id}`,
         type: 'appointment',
         title: 'Consulta agendada',
-        message: `${created.petName} foi agendado para ${created.date} às ${created.time}.`,
+        message: `${created.petName} foi agendado para ${created.date} ï¿½s ${created.time}.`,
         date: new Date().toISOString().slice(0, 10),
       }),
     });
@@ -179,10 +180,10 @@ export function InteractionProvider({ children }: { children: ReactNode }) {
         appointmentId: updated.id,
         sourceKey,
         type: 'appointment',
-        title: 'Atualização de consulta',
+        title: 'Atualizaï¿½ï¿½o de consulta',
         message:
           updated.status === 'completed'
-            ? `${updated.petName} teve a consulta concluída.`
+            ? `${updated.petName} teve a consulta concluï¿½da.`
             : updated.status === 'cancelled'
               ? `${updated.petName} teve a consulta cancelada.`
               : `${updated.petName} teve a consulta atualizada.`,
@@ -197,7 +198,7 @@ export function InteractionProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const addNotification = async (notification: Omit<Notification, 'id'>) => {
+  const addNotification = useCallback(async (notification: Omit<Notification, 'id'>) => {
     const resp = await fetch(`${API_BASE}/api/notifications`, {
       method: 'POST',
       headers: {
@@ -214,7 +215,7 @@ export function InteractionProvider({ children }: { children: ReactNode }) {
     const { data } = await resp.json();
     const created = toUiNotification(data);
     setNotifications((prev) => [created, ...prev.filter((item) => item.id !== created.id)]);
-  };
+  }, [API_BASE]);
 
   const markNotificationAsRead = async (id: string) => {
     const resp = await fetch(`${API_BASE}/api/notifications/${id}/read`, {

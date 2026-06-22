@@ -47,6 +47,7 @@ type VeterinarianRow = RowDataPacket & {
   name: string;
   crmv: string;
   crmv_uf: string;
+  specialty: string | null;
   phone: string | null;
   created_at: Date;
   updated_at: Date;
@@ -96,6 +97,7 @@ export type CreateVeterinarianProfileInput = {
   name: string;
   crmv: string;
   crmv_uf: string;
+  specialty?: string | null;
   phone?: string | null;
 };
 
@@ -104,6 +106,7 @@ export type UpdateVeterinarianProfileInput = {
   email?: string;
   crmv?: string;
   crmv_uf?: string;
+  specialty?: string | null;
   phone?: string | null;
 };
 
@@ -115,6 +118,7 @@ export type PublicUserRecord = {
   name: string;
   phone: string | null;
   cpf: string | null;
+  specialty: string | null;
   trade_name: string | null;
   corporate_name: string | null;
   cnpj: string | null;
@@ -286,9 +290,9 @@ export async function createVeterinarianProfile(userId: string, input: CreateVet
   const id = randomUUID();
 
   await client.execute(
-    `INSERT INTO veterinarians (id, user_id, name, crmv, crmv_uf, phone)
-     VALUES (?, ?, ?, ?, ?, ?)`,
-    [id, userId, input.name, input.crmv, input.crmv_uf, input.phone ?? null]
+    `INSERT INTO veterinarians (id, user_id, name, crmv, crmv_uf, specialty, phone)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [id, userId, input.name, input.crmv, input.crmv_uf, input.specialty ?? null, input.phone ?? null]
   );
 
   return id;
@@ -316,6 +320,11 @@ export async function updateVeterinarianProfile(userId: string, input: UpdateVet
   if (input.crmv_uf !== undefined) {
     assignments.push('crmv_uf = ?');
     values.push(input.crmv_uf);
+  }
+
+  if (input.specialty !== undefined) {
+    assignments.push('specialty = ?');
+    values.push(input.specialty);
   }
 
   if (input.phone !== undefined) {
@@ -389,6 +398,7 @@ function toPublicUserRecord(user: AuthUserRow, profile: TutorRow | ClinicRow | V
       working_hours: null,
       crmv: null,
       crmv_uf: null,
+      specialty: null,
       clinic_name: null,
       created_at: user.created_at,
       updated_at: user.updated_at,
@@ -414,6 +424,7 @@ function toPublicUserRecord(user: AuthUserRow, profile: TutorRow | ClinicRow | V
       working_hours: parseObjectJson(clinic.working_hours),
       crmv: null,
       crmv_uf: null,
+      specialty: null,
       clinic_name: clinic.trade_name,
       created_at: user.created_at,
       updated_at: user.updated_at,
@@ -438,6 +449,7 @@ function toPublicUserRecord(user: AuthUserRow, profile: TutorRow | ClinicRow | V
     working_hours: null,
     crmv: veterinarian.crmv,
     crmv_uf: veterinarian.crmv_uf,
+    specialty: veterinarian.specialty,
     clinic_name: null,
     created_at: user.created_at,
     updated_at: user.updated_at,
@@ -513,5 +525,57 @@ export async function listTutorProfiles() {
   const [rows] = await pool.query<AuthUserRow[]>(`SELECT id FROM users WHERE user_type = 'tutor' ORDER BY created_at DESC`);
   const profiles = await Promise.all(rows.map(row => getUserProfileById(row.id)));
   return profiles.filter((profile): profile is PublicUserRecord => profile !== null);
+}
+
+
+export async function listClinicProfiles(query?: string) {
+  const search = query?.trim().toLowerCase() ?? '';
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `
+      SELECT u.id
+      FROM users u
+      INNER JOIN clinics c ON c.user_id = u.id
+      WHERE u.user_type = 'clinic'
+        AND (
+          ? = ''
+          OR LOWER(c.trade_name) LIKE ?
+          OR LOWER(COALESCE(c.corporate_name, '')) LIKE ?
+          OR LOWER(COALESCE(c.address, '')) LIKE ?
+          OR LOWER(COALESCE(c.connection_code, '')) LIKE ?
+        )
+      ORDER BY c.trade_name ASC
+      LIMIT 50
+    `,
+    [search, `%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`]
+  );
+
+  const profiles = await Promise.all(rows.map((row) => getUserProfileById(String(row.id))));
+  return profiles.filter((profile): profile is PublicUserRecord => profile !== null && profile.user_type === 'clinic');
+}
+
+export async function listVeterinarianProfiles(query?: string, specialty?: string) {
+  const search = query?.trim().toLowerCase() ?? '';
+  const specialtySearch = specialty?.trim().toLowerCase() ?? '';
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `
+      SELECT u.id
+      FROM users u
+      INNER JOIN veterinarians v ON v.user_id = u.id
+      WHERE u.user_type = 'veterinarian'
+        AND (
+          ? = ''
+          OR LOWER(v.name) LIKE ?
+          OR LOWER(COALESCE(v.crmv, '')) LIKE ?
+          OR LOWER(COALESCE(v.specialty, '')) LIKE ?
+        )
+        AND (? = '' OR LOWER(COALESCE(v.specialty, '')) LIKE ?)
+      ORDER BY v.name ASC
+      LIMIT 50
+    `,
+    [search, `%${search}%`, `%${search}%`, `%${search}%`, specialtySearch, `%${specialtySearch}%`]
+  );
+
+  const profiles = await Promise.all(rows.map((row) => getUserProfileById(String(row.id))));
+  return profiles.filter((profile): profile is PublicUserRecord => profile !== null && profile.user_type === 'veterinarian');
 }
 

@@ -48,6 +48,7 @@ export async function ensureDatabaseSchema() {
   await ensureNullableColumn('vaccines', 'veterinarian_name', 'veterinarian_name VARCHAR(120) NULL');
   await ensureNullableColumn('vaccines', 'clinic_name', 'clinic_name VARCHAR(180) NULL');
   await ensureNullableColumn('vaccines', 'next_dose_date', 'next_dose_date DATE NULL');
+  await ensureNullableColumn('veterinarians', 'specialty', 'specialty VARCHAR(120) NULL');
   await ensureNullableColumn('notifications', 'source_key', 'source_key VARCHAR(120) NULL');
 
   await pool.query(`

@@ -19,6 +19,7 @@ export default function RegisterScreen() {
   const [cnpj, setCnpj] = useState('');
   const [crmv, setCrmv] = useState('');
   const [crmvUf, setCrmvUf] = useState('');
+  const [specialty, setSpecialty] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -44,6 +45,7 @@ export default function RegisterScreen() {
         cnpj: userType === 'clinic' ? cnpj : undefined,
         crmv: userType === 'veterinarian' ? crmv : undefined,
         crmvUf: userType === 'veterinarian' ? crmvUf : undefined,
+        specialty: userType === 'veterinarian' ? specialty : undefined,
       });
 
       navigate(getDashboardRouteForUserType(resolvedUserType), { replace: true });
@@ -157,6 +159,23 @@ export default function RegisterScreen() {
                   style={{ textAlign: 'center' }}
                 />
               </div>
+            </div>
+          ) : null}
+
+          {userType === 'veterinarian' ? (
+            <div className="auth-field">
+              <label htmlFor="specialty" className="auth-label">
+                Especialidade <span className="auth-required">*</span>
+              </label>
+              <input
+                type="text"
+                id="specialty"
+                value={specialty}
+                onChange={(e) => setSpecialty(e.target.value)}
+                className="auth-input auth-input-no-icon"
+                placeholder="Clínica geral, dermatologia, felinos"
+                required
+              />
             </div>
           ) : null}
 

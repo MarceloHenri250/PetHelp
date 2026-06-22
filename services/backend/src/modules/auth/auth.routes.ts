@@ -70,6 +70,7 @@ router.post('/register', async (req, res, next) => {
         : null;
     const crmv = asTrimmedString(body.crmv) || null;
     const crmvUf = (asTrimmedString(body.crmvUf) || asTrimmedString(body.crmv_uf) || '').toUpperCase() || null;
+    const specialty = asTrimmedString(body.specialty) || null;
 
     if (!email || !password || !userType) {
       res.status(400).json({ message: 'email, password and userType are required' });
@@ -142,6 +143,7 @@ router.post('/register', async (req, res, next) => {
           name,
           crmv: crmv ?? '',
           crmv_uf: crmvUf ?? '',
+          specialty,
           phone,
         },
         connection

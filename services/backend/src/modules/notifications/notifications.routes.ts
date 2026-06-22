@@ -141,6 +141,39 @@ router.post('/', async (req: AuthRequest, res, next) => {
     }
 
     await connection.beginTransaction();
+
+    const sourceKey = asTrimmedString(body.sourceKey) || null;
+    if (sourceKey) {
+      const [existingRows] = await connection.query<NotificationRow[]>(
+        `
+          SELECT
+            id,
+            user_id,
+            pet_id,
+            appointment_id,
+            source_key,
+            type,
+            title,
+            message,
+            notification_date,
+            read_at,
+            created_at,
+            updated_at
+          FROM notifications
+          WHERE user_id = ? AND source_key = ?
+          LIMIT 1
+        `,
+        [userId, sourceKey]
+      );
+
+      const existing = existingRows[0] ?? null;
+      if (existing) {
+        await connection.commit();
+        res.status(200).json({ data: normalizeNotification(existing) });
+        return;
+      }
+    }
+
     const id = randomUUID();
     await connection.execute(
       `
@@ -162,7 +195,7 @@ router.post('/', async (req: AuthRequest, res, next) => {
         userId,
         asTrimmedString(body.petId) || null,
         asTrimmedString(body.appointmentId) || null,
-        asTrimmedString(body.sourceKey) || null,
+        sourceKey,
         type,
         title,
         message,

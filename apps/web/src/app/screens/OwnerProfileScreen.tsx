@@ -1,29 +1,9 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
-import {
-  ArrowLeft,
-  ChevronRight,
-  IdCard,
-  Languages,
-  Mail,
-  Phone,
-  Save,
-  Settings,
-  ShieldAlert,
-  Trash2,
-  User,
-} from 'lucide-react';
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '../components/ui/alert-dialog';
+import { ChevronRight, IdCard, Languages, Mail, Phone, Save, Settings, ShieldAlert, Trash2, User } from 'lucide-react';
+import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../components/ui/alert-dialog';
 import { useSession } from '../context/SessionContext';
-import { useAppNavigation } from '../navigation';
+import { TutorShell } from '../components/layout/TutorShell';
 
 function digitsOnly(value: string) {
   return value.replace(/\D/g, '');
@@ -62,7 +42,6 @@ function formatPhone(value: string) {
 export default function OwnerProfileScreen() {
   const navigate = useNavigate();
   const { user, updateCurrentUserProfile, deleteCurrentUserAccount } = useSession();
-  const { goToDashboard } = useAppNavigation();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [cpf, setCpf] = useState('');
@@ -90,16 +69,10 @@ export default function OwnerProfileScreen() {
         cpf: cpf.trim() || null,
       });
 
-      setFeedback({
-        type: 'success',
-        message: 'Configurações salvas com sucesso.',
-      });
+      setFeedback({ type: 'success', message: 'Configurações salvas com sucesso.' });
     } catch (error) {
       console.error('Falha ao atualizar perfil:', error);
-      setFeedback({
-        type: 'error',
-        message: 'Não foi possível atualizar as configurações.',
-      });
+      setFeedback({ type: 'error', message: 'Não foi possível atualizar as configurações.' });
     } finally {
       setSaving(false);
     }
@@ -107,10 +80,7 @@ export default function OwnerProfileScreen() {
 
   const handleDelete = async () => {
     if (deleteConfirmation.trim().toUpperCase() !== 'EXCLUIR') {
-      setFeedback({
-        type: 'error',
-        message: 'Digite EXCLUIR para confirmar a remoção da conta.',
-      });
+      setFeedback({ type: 'error', message: 'Digite EXCLUIR para confirmar a remoção da conta.' });
       return;
     }
 
@@ -122,10 +92,7 @@ export default function OwnerProfileScreen() {
       navigate('/', { replace: true });
     } catch (error) {
       console.error('Falha ao excluir conta:', error);
-      setFeedback({
-        type: 'error',
-        message: 'Nao foi possivel excluir a conta. Verifique se existem registros vinculados.',
-      });
+      setFeedback({ type: 'error', message: 'Nao foi possivel excluir a conta. Verifique se existem registros vinculados.' });
     } finally {
       setDeleting(false);
       setDeleteDialogOpen(false);
@@ -134,244 +101,143 @@ export default function OwnerProfileScreen() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="bg-card border-b border-border">
-        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
-          <button
-            onClick={() => goToDashboard('owner')}
-            className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            <span>Voltar</span>
-          </button>
-
-          <div className="text-right">
-            <p className="text-sm text-muted-foreground">Configurações do tutor</p>
-            <p className="text-foreground">{user?.name || 'Conta do tutor'}</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-4xl mx-auto px-6 py-8 space-y-6">
-        <section className="bg-card rounded-3xl shadow-lg p-8 border border-border">
-          <div className="flex items-center gap-4 mb-8">
-            <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center">
-              <Settings className="w-7 h-7 text-primary" />
+    <TutorShell active="settings" title="Configurações" description="Atualize seus dados, idioma e preferências da conta.">
+      <div className="space-y-6">
+        <section className="rounded-[34px] border border-border/70 bg-card p-6 shadow-[0_24px_60px_-36px_rgba(127,162,106,0.18)] sm:p-8">
+          <div className="mb-8 flex items-center gap-4">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <Settings className="h-7 w-7" />
             </div>
             <div>
-              <h1 className="text-2xl text-foreground">Configurações da conta</h1>
+              <h1 className="text-3xl font-medium text-foreground">Configurações da conta</h1>
               <p className="text-muted-foreground">Edite seus dados e gerencie sua experiência no sistema.</p>
             </div>
           </div>
 
           {feedback && (
-            <div
-              className={`mb-6 rounded-2xl border px-4 py-3 text-sm ${
-                feedback.type === 'success'
-                  ? 'border-green-200 bg-green-50 text-green-700'
-                  : 'border-red-200 bg-red-50 text-red-700'
-              }`}
-            >
+            <div className={`mb-6 rounded-2xl border px-4 py-3 text-sm ${feedback.type === 'success' ? 'border-green-200 bg-green-50 text-green-700' : 'border-red-200 bg-red-50 text-red-700'}`}>
               {feedback.message}
             </div>
           )}
 
           <form onSubmit={handleSave} className="space-y-5">
             <div>
-              <label className="block text-foreground mb-2">Nome completo</label>
+              <label className="mb-2 block text-foreground">Nome completo</label>
               <div className="relative">
-                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 bg-input border-2 border-border rounded-2xl focus:border-primary focus:outline-none transition-colors text-foreground"
-                  required
-                />
+                <User className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full rounded-[18px] border border-border bg-[#efe9de] py-3 pl-12 pr-4 text-foreground outline-none transition-colors focus:border-primary" required />
               </div>
             </div>
 
             <div>
-              <div className="flex items-center justify-between gap-3 mb-2">
+              <div className="mb-2 flex items-center justify-between gap-3">
                 <label className="block text-foreground">E-mail</label>
-                <span className="text-xs rounded-full bg-muted px-2.5 py-1 text-muted-foreground">Bloqueado</span>
+                <span className="rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground">Bloqueado</span>
               </div>
               <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <input
-                  type="email"
-                  value={user?.email ?? ''}
-                  disabled
-                  aria-readonly="true"
-                  className="w-full pl-12 pr-4 py-3 bg-muted border-2 border-border rounded-2xl text-muted-foreground cursor-not-allowed"
-                />
+                <Mail className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                <input type="email" value={user?.email ?? ''} disabled aria-readonly="true" className="w-full rounded-[18px] border border-border bg-muted py-3 pl-12 pr-4 text-muted-foreground cursor-not-allowed" />
               </div>
               <p className="mt-2 text-xs text-muted-foreground">O e-mail não pode ser alterado nesta conta.</p>
             </div>
 
             <div>
-              <label className="block text-foreground mb-2">Telefone</label>
+              <label className="mb-2 block text-foreground">Telefone</label>
               <div className="relative">
-                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(formatPhone(e.target.value))}
-                  className="w-full pl-12 pr-4 py-3 bg-input border-2 border-border rounded-2xl focus:border-primary focus:outline-none transition-colors text-foreground"
-                  placeholder="(11) 99999-9999"
-                />
+                <Phone className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                <input type="tel" value={phone} onChange={(e) => setPhone(formatPhone(e.target.value))} className="w-full rounded-[18px] border border-border bg-[#efe9de] py-3 pl-12 pr-4 text-foreground outline-none transition-colors focus:border-primary" placeholder="(11) 99999-9999" />
               </div>
             </div>
 
             <div>
-              <label className="block text-foreground mb-2">CPF</label>
+              <label className="mb-2 block text-foreground">CPF</label>
               <div className="relative">
-                <IdCard className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <input
-                  type="text"
-                  value={cpf}
-                  onChange={(e) => setCpf(formatCpf(e.target.value))}
-                  className="w-full pl-12 pr-4 py-3 bg-input border-2 border-border rounded-2xl focus:border-primary focus:outline-none transition-colors text-foreground"
-                  placeholder="000.000.000-00"
-                />
+                <IdCard className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                <input type="text" value={cpf} onChange={(e) => setCpf(formatCpf(e.target.value))} className="w-full rounded-[18px] border border-border bg-[#efe9de] py-3 pl-12 pr-4 text-foreground outline-none transition-colors focus:border-primary" placeholder="000.000.000-00" />
               </div>
             </div>
 
-            <div className="pt-4">
-              <button
-                type="submit"
-                disabled={saving || deleting}
-                className="inline-flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-white px-5 py-3 rounded-2xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Save className="w-4 h-4" />
-                {saving ? 'Salvando...' : 'Salvar configurações'}
+            <div className="pt-2">
+              <button type="submit" disabled={saving || deleting} className="inline-flex items-center justify-center gap-2 rounded-[18px] bg-primary px-5 py-3 text-white transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50">
+                <Save className="h-4 w-4" />
+                {saving ? 'Salvando...' : 'Salvar alterações'}
               </button>
             </div>
           </form>
         </section>
 
-        <section className="bg-card rounded-3xl shadow-lg p-8 border border-border">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center">
-              <Languages className="w-7 h-7 text-primary" />
+        <section className="rounded-[34px] border border-border/70 bg-card p-6 shadow-[0_24px_60px_-36px_rgba(127,162,106,0.18)] sm:p-8">
+          <div className="mb-6 flex items-center gap-4">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <Languages className="h-7 w-7" />
             </div>
             <div>
-              <h2 className="text-2xl text-foreground">Idioma do sistema</h2>
-              <p className="text-muted-foreground">A personalização de idioma sera liberada em breve.</p>
+              <h2 className="text-3xl font-medium text-foreground">Idioma do sistema</h2>
+              <p className="text-muted-foreground">A personalização de idioma será liberada em breve.</p>
             </div>
           </div>
 
-          <div className="rounded-2xl border border-dashed border-border bg-muted/40 p-5">
+          <div className="rounded-[28px] border border-dashed border-border bg-muted/25 p-5">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-foreground mb-1">Português (Brasil)</p>
-                <p className="text-sm text-muted-foreground">Em breve você podera alternar entre os idiomas disponíveis.</p>
+                <p className="mb-1 text-foreground">Português (Brasil)</p>
+                <p className="text-sm text-muted-foreground">Em breve você poderá alternar entre os idiomas disponíveis.</p>
               </div>
-              <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs text-primary">
-                Em breve
-              </span>
+              <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs text-primary">Em breve</span>
             </div>
-
-            <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
               {['Português (Brasil)', 'English', 'Espanhol'].map((language, index) => (
-                <button
-                  key={language}
-                  type="button"
-                  disabled
-                  className={`flex items-center justify-between rounded-2xl border px-4 py-3 text-left transition-colors ${
-                    index === 0
-                      ? 'border-primary bg-primary/10 text-primary'
-                      : 'border-border bg-background text-muted-foreground'
-                  } cursor-not-allowed opacity-90`}
-                >
+                <button key={language} type="button" disabled className={`flex cursor-not-allowed items-center justify-between rounded-[18px] border px-4 py-3 text-left transition-colors ${index === 0 ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-background text-muted-foreground'} opacity-90`}>
                   <span>{language}</span>
-                  {index === 0 ? <ChevronRight className="w-4 h-4" /> : null}
+                  {index === 0 ? <ChevronRight className="h-4 w-4" /> : null}
                 </button>
               ))}
             </div>
           </div>
         </section>
 
-        <section className="bg-red-50 rounded-3xl shadow-lg p-8 border border-red-200">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="w-14 h-14 bg-red-100 rounded-2xl flex items-center justify-center">
-              <ShieldAlert className="w-7 h-7 text-red-600" />
+        <section className="rounded-[34px] border border-red-200 bg-red-50 p-6 shadow-[0_24px_60px_-36px_rgba(127,162,106,0.18)] sm:p-8">
+          <div className="mb-6 flex items-center gap-4">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-red-100 text-red-600">
+              <ShieldAlert className="h-7 w-7" />
             </div>
             <div>
-              <h2 className="text-2xl text-red-700">Zona de perigo</h2>
+              <h2 className="text-3xl font-medium text-red-700">Zona de perigo</h2>
               <p className="text-red-600/80">A exclusão da conta remove permanentemente seus dados de acesso.</p>
             </div>
           </div>
-
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-red-700 mb-1">Excluir conta</p>
-              <p className="text-sm text-red-600/80">
-                Seus pets vinculados permanecem no sistema sem tutor. Se houver registros dependentes, a exclusão pode ser bloqueada.
-              </p>
+              <p className="mb-1 text-red-700">Excluir conta</p>
+              <p className="text-sm text-red-600/80">Seus pets vinculados permanecem no sistema sem tutor. Se houver registros dependentes, a exclusão pode ser bloqueada.</p>
             </div>
-
-            <button
-              type="button"
-              onClick={() => setDeleteDialogOpen(true)}
-              disabled={saving || deleting}
-              className="inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-5 py-3 rounded-2xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Trash2 className="w-4 h-4" />
+            <button type="button" onClick={() => setDeleteDialogOpen(true)} disabled={saving || deleting} className="inline-flex items-center justify-center gap-2 rounded-[18px] bg-red-600 px-5 py-3 text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50">
+              <Trash2 className="h-4 w-4" />
               {deleting ? 'Excluindo...' : 'Excluir conta'}
             </button>
           </div>
         </section>
       </div>
 
-      <AlertDialog
-        open={deleteDialogOpen}
-        onOpenChange={(open) => {
-          setDeleteDialogOpen(open);
-          if (!open) {
-            setDeleteConfirmation('');
-          }
-        }}
-      >
+      <AlertDialog open={deleteDialogOpen} onOpenChange={(open) => { setDeleteDialogOpen(open); if (!open) setDeleteConfirmation(''); }}>
         <AlertDialogContent className="max-w-lg">
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar exclusão da conta</AlertDialogTitle>
-            <AlertDialogDescription>
-              Digite EXCLUIR para confirmar. Seus pets continuarao no sistema sem tutor, e quaisquer dependencias podem impedir a exclusão.
-            </AlertDialogDescription>
+            <AlertDialogDescription>Digite EXCLUIR para confirmar. Seus pets continuarão no sistema sem tutor, e quaisquer dependências podem impedir a exclusão.</AlertDialogDescription>
           </AlertDialogHeader>
-
           <div className="space-y-2">
             <label className="block text-sm text-foreground">Confirme digitando EXCLUIR</label>
-            <input
-              type="text"
-              value={deleteConfirmation}
-              onChange={(e) => setDeleteConfirmation(e.target.value)}
-              className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-foreground outline-none focus:border-red-400"
-              placeholder="EXCLUIR"
-            />
+            <input type="text" value={deleteConfirmation} onChange={(e) => setDeleteConfirmation(e.target.value)} className="w-full rounded-[18px] border border-border bg-background px-4 py-3 text-foreground outline-none focus:border-red-400" placeholder="EXCLUIR" />
           </div>
-
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
-            <button
-              type="button"
-              onClick={handleDelete}
-              disabled={deleting || deleteConfirmation.trim().toUpperCase() !== 'EXCLUIR'}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-red-600 px-4 py-2 text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <Trash2 className="w-4 h-4" />
+            <button type="button" onClick={handleDelete} disabled={deleting || deleteConfirmation.trim().toUpperCase() !== 'EXCLUIR'} className="inline-flex items-center justify-center gap-2 rounded-[18px] bg-red-600 px-4 py-2 text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50">
+              <Trash2 className="h-4 w-4" />
               {deleting ? 'Excluindo...' : 'Excluir conta'}
             </button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </TutorShell>
   );
 }
-
-
-
-
-
-

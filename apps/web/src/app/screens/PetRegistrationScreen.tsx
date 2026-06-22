@@ -2,12 +2,14 @@
 import { useLocation, useNavigate } from 'react-router';
 import { Camera, PawPrint } from 'lucide-react';
 import { usePets } from '../context/PetsContext';
+import { TutorShell } from '../components/layout/TutorShell';
 
 export default function PetRegistrationScreen() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { currentPet, addPet, updatePet } = usePets();
-  const isEditing = location.state?.mode === 'edit' && !!currentPet;
+  const { currentPet, pets, addPet, updatePet } = usePets();
+  const selectedPet = location.state?.petId ? pets.find((pet) => pet.id === location.state.petId) ?? currentPet : currentPet;
+  const isEditing = location.state?.mode === 'edit' && !!selectedPet;
   const [name, setName] = useState('');
   const [species, setSpecies] = useState('');
   const [age, setAge] = useState('');
@@ -19,12 +21,12 @@ export default function PetRegistrationScreen() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (location.state?.mode === 'edit' && !currentPet) {
+    if (location.state?.mode === 'edit' && !selectedPet) {
       navigate('/owner-dashboard', { replace: true });
       return;
     }
 
-    if (!isEditing || !currentPet) {
+    if (!isEditing || !selectedPet) {
       setName('');
       setSpecies('');
       setAge('');
@@ -36,15 +38,15 @@ export default function PetRegistrationScreen() {
       return;
     }
 
-    setName(currentPet.name);
-    setSpecies(currentPet.species || '');
-    setAge(currentPet.age || '');
-    setBreed(currentPet.breed || '');
-    setWeight(currentPet.weight || '');
-    setPhoto(currentPet.photo || '');
-    setAllergiesStr(currentPet.allergies ? currentPet.allergies.join(', ') : '');
-    setConditionsStr(currentPet.conditions ? currentPet.conditions.join(', ') : '');
-  }, [isEditing, currentPet, location.state?.mode, navigate]);
+    setName(selectedPet.name);
+    setSpecies(selectedPet.species || '');
+    setAge(selectedPet.age || '');
+    setBreed(selectedPet.breed || '');
+    setWeight(selectedPet.weight || '');
+    setPhoto(selectedPet.photo || '');
+    setAllergiesStr(selectedPet.allergies ? selectedPet.allergies.join(', ') : '');
+    setConditionsStr(selectedPet.conditions ? selectedPet.conditions.join(', ') : '');
+  }, [isEditing, selectedPet, pets, location.state?.mode, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,12 +60,12 @@ export default function PetRegistrationScreen() {
         breed: breed.trim() || null,
         weight: weight.trim() || null,
         photo: photo || null,
-        allergies: allergiesStr ? allergiesStr.split(',').map(s => s.trim()).filter(Boolean) : null,
-        conditions: conditionsStr ? conditionsStr.split(',').map(s => s.trim()).filter(Boolean) : null,
+        allergies: allergiesStr ? allergiesStr.split(',').map((s) => s.trim()).filter(Boolean) : null,
+        conditions: conditionsStr ? conditionsStr.split(',').map((s) => s.trim()).filter(Boolean) : null,
       };
 
-      if (isEditing && currentPet) {
-        await updatePet(currentPet.id, petPayload);
+      if (isEditing && selectedPet) {
+        await updatePet(selectedPet.id, petPayload);
       } else {
         await addPet(petPayload);
       }
@@ -81,29 +83,19 @@ export default function PetRegistrationScreen() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6 py-8">
-      <div className="w-full max-w-md">
-        <div className="flex flex-col items-center mb-8">
-          <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center mb-4">
-            <PawPrint className="w-10 h-10 text-white" />
-          </div>
-          <h1 className="text-3xl text-foreground mb-2">{isEditing ? 'Editar Pet' : 'Adicionar Seu Pet'}</h1>
-          <p className="text-muted-foreground">
-            {isEditing ? 'Atualize as informações do pet' : 'Conte-nos sobre seu amigo peludo'}
-          </p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="bg-card rounded-3xl shadow-lg p-8 border border-border">
-          <div className="flex flex-col items-center mb-6">
-            <div className="w-32 h-32 bg-muted rounded-full overflow-hidden flex items-center justify-center border-4 border-border mb-4">
-              {photo ? (
-                <img src={photo} alt="Pet" className="w-full h-full object-cover" />
-              ) : (
-                <Camera className="w-12 h-12 text-muted-foreground" />
-              )}
+    <TutorShell
+      active="home"
+      title={isEditing ? 'Editar pet' : 'Adicionar seu pet'}
+      description={isEditing ? 'Atualize as informações do pet.' : 'Conte-nos sobre seu amigo peludo.'}
+    >
+      <div className="mx-auto max-w-3xl">
+        <form onSubmit={handleSubmit} className="rounded-[34px] border border-border/70 bg-card p-6 shadow-[0_24px_60px_-36px_rgba(127,162,106,0.18)] sm:p-8">
+          <div className="mb-8 flex flex-col items-center">
+            <div className="mb-4 flex h-32 w-32 items-center justify-center overflow-hidden rounded-full border-4 border-border bg-muted">
+              {photo ? <img src={photo} alt="Pet" className="h-full w-full object-cover" /> : <Camera className="h-12 w-12 text-muted-foreground" />}
             </div>
             <div className="w-full">
-              <label htmlFor="photo" className="block text-foreground mb-2 text-center text-sm font-medium">
+              <label htmlFor="photo" className="mb-2 block text-center text-sm font-medium text-foreground">
                 Foto (opcional)
               </label>
               <input
@@ -120,116 +112,59 @@ export default function PetRegistrationScreen() {
                   };
                   reader.readAsDataURL(file);
                 }}
-                className="w-full px-4 py-3 bg-input border-2 border-border rounded-2xl focus:border-primary focus:outline-none transition-colors text-foreground text-center file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-primary/90"
+                className="w-full rounded-[18px] border border-border bg-[#efe9de] px-4 py-3 text-center text-foreground outline-none transition-colors focus:border-primary"
               />
             </div>
           </div>
 
-          <div className="mb-4">
-            <label htmlFor="petName" className="block text-foreground mb-2">
-              Nome do Pet <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              id="petName"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-4 py-3 bg-input border-2 border-border rounded-2xl focus:border-primary focus:outline-none transition-colors text-foreground"
-              placeholder="Max"
-              required
-            />
+          <div className="grid gap-4">
+            <div>
+              <label htmlFor="petName" className="mb-2 block text-foreground">
+                Nome do Pet <span className="text-destructive">*</span>
+              </label>
+              <input type="text" id="petName" value={name} onChange={(e) => setName(e.target.value)} className="w-full rounded-[18px] border border-border bg-[#efe9de] px-4 py-3 text-foreground outline-none transition-colors focus:border-primary" placeholder="Max" required />
+            </div>
+
+            <div>
+              <label htmlFor="species" className="mb-2 block text-foreground">
+                Espécie <span className="text-destructive">*</span>
+              </label>
+              <input type="text" id="species" value={species} onChange={(e) => setSpecies(e.target.value)} className="w-full rounded-[18px] border border-border bg-[#efe9de] px-4 py-3 text-foreground outline-none transition-colors focus:border-primary" placeholder="Cachorro, Gato, etc." required />
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label htmlFor="age" className="mb-2 block text-foreground">Idade</label>
+                <input type="text" id="age" value={age} onChange={(e) => setAge(e.target.value)} className="w-full rounded-[18px] border border-border bg-[#efe9de] px-4 py-3 text-foreground outline-none transition-colors focus:border-primary" placeholder="3 anos" />
+              </div>
+              <div>
+                <label htmlFor="breed" className="mb-2 block text-foreground">Raça</label>
+                <input type="text" id="breed" value={breed} onChange={(e) => setBreed(e.target.value)} className="w-full rounded-[18px] border border-border bg-[#efe9de] px-4 py-3 text-foreground outline-none transition-colors focus:border-primary" placeholder="Golden Retriever" />
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label htmlFor="weight" className="mb-2 block text-foreground">Peso</label>
+                <input type="text" id="weight" value={weight} onChange={(e) => setWeight(e.target.value)} className="w-full rounded-[18px] border border-border bg-[#efe9de] px-4 py-3 text-foreground outline-none transition-colors focus:border-primary" placeholder="25 kg" />
+              </div>
+              <div>
+                <label htmlFor="allergies" className="mb-2 block text-foreground">Alergias</label>
+                <input type="text" id="allergies" value={allergiesStr} onChange={(e) => setAllergiesStr(e.target.value)} className="w-full rounded-[18px] border border-border bg-[#efe9de] px-4 py-3 text-foreground outline-none transition-colors focus:border-primary" placeholder="ex: Amendoim, Poeira" />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="conditions" className="mb-2 block text-foreground">Condições</label>
+              <input type="text" id="conditions" value={conditionsStr} onChange={(e) => setConditionsStr(e.target.value)} className="w-full rounded-[18px] border border-border bg-[#efe9de] px-4 py-3 text-foreground outline-none transition-colors focus:border-primary" placeholder="ex: Diabetes, Artrite" />
+            </div>
           </div>
 
-          <div className="mb-4">
-            <label htmlFor="species" className="block text-foreground mb-2">
-              Espécie <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              id="species"
-              value={species}
-              onChange={(e) => setSpecies(e.target.value)}
-              className="w-full px-4 py-3 bg-input border-2 border-border rounded-2xl focus:border-primary focus:outline-none transition-colors text-foreground"
-              placeholder="Cachorro, Gato, etc."
-              required
-            />
-          </div>
-
-          <div className="mb-4">
-            <label htmlFor="age" className="block text-foreground mb-2">
-              Idade
-            </label>
-            <input
-              type="text"
-              id="age"
-              value={age}
-              onChange={(e) => setAge(e.target.value)}
-              className="w-full px-4 py-3 bg-input border-2 border-border rounded-2xl focus:border-primary focus:outline-none transition-colors text-foreground"
-              placeholder="3 anos"
-            />
-          </div>
-
-          <div className="mb-4">
-            <label htmlFor="breed" className="block text-foreground mb-2">
-              Raça
-            </label>
-            <input
-              type="text"
-              id="breed"
-              value={breed}
-              onChange={(e) => setBreed(e.target.value)}
-              className="w-full px-4 py-3 bg-input border-2 border-border rounded-2xl focus:border-primary focus:outline-none transition-colors text-foreground"
-              placeholder="Golden Retriever"
-            />
-          </div>
-
-          <div className="mb-4">
-            <label htmlFor="weight" className="block text-foreground mb-2">
-              Peso
-            </label>
-            <input
-              type="text"
-              id="weight"
-              value={weight}
-              onChange={(e) => setWeight(e.target.value)}
-              className="w-full px-4 py-3 bg-input border-2 border-border rounded-2xl focus:border-primary focus:outline-none transition-colors text-foreground"
-              placeholder="25 kg"
-            />
-          </div>
-
-          <div className="mb-4">
-            <label htmlFor="allergies" className="block text-foreground mb-2">
-              Alergias (separadas por vírgula)
-            </label>
-            <input
-              type="text"
-              id="allergies"
-              value={allergiesStr}
-              onChange={(e) => setAllergiesStr(e.target.value)}
-              className="w-full px-4 py-3 bg-input border-2 border-border rounded-2xl focus:border-primary focus:outline-none transition-colors text-foreground"
-              placeholder="ex: Amendoim, Poeira"
-            />
-          </div>
-
-          <div className="mb-4">
-            <label htmlFor="conditions" className="block text-foreground mb-2">
-              Condições (separadas por vírgula)
-            </label>
-            <input
-              type="text"
-              id="conditions"
-              value={conditionsStr}
-              onChange={(e) => setConditionsStr(e.target.value)}
-              className="w-full px-4 py-3 bg-input border-2 border-border rounded-2xl focus:border-primary focus:outline-none transition-colors text-foreground"
-              placeholder="ex: Diabetes, Artrite"
-            />
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-end">
             <button
               type="button"
               onClick={handleCancel}
-              className="w-full sm:w-auto px-6 py-4 border border-border rounded-2xl text-muted-foreground hover:bg-muted transition-colors"
+              className="w-full rounded-[18px] border border-border bg-background px-6 py-3 text-muted-foreground transition-colors hover:bg-muted sm:w-auto"
               disabled={loading}
             >
               Cancelar
@@ -237,15 +172,14 @@ export default function PetRegistrationScreen() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-primary hover:bg-primary/90 text-white py-4 rounded-2xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-[18px] bg-primary px-6 py-3 text-white transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
             >
-              {loading ? 'Salvando...' : isEditing ? 'Atualizar Pet' : 'Salvar Pet'}
+              <PawPrint className="h-5 w-5" />
+              {loading ? 'Salvando...' : isEditing ? 'Atualizar pet' : 'Salvar pet'}
             </button>
           </div>
         </form>
       </div>
-    </div>
+    </TutorShell>
   );
 }
-
-

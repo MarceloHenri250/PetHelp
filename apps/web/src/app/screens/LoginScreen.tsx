@@ -287,6 +287,13 @@ export default function LoginScreen() {
 
               {recoveryStep === 'verify' ? (
                 <form onSubmit={handleRecoveryCodeVerify}>
+                  {recoveryCode ? (
+                    <div className="auth-code-box">
+                      <div className="auth-code-label">Código enviado para {recoveryEmail}.</div>
+                      <div className="auth-code-value">{recoveryCode}</div>
+                    </div>
+                  ) : null}
+
                   <div className="auth-field">
                     <label htmlFor="recovery-code" className="auth-label">
                       Código de verificação <span className="auth-required">*</span>

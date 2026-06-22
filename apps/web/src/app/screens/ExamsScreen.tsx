@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+Ôªøimport { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Copy, Download, Eye, FileText, Mail, Paperclip, ShieldCheck } from 'lucide-react';
 import { decodeExamDocument, getApiBase, getAuthHeaders, type VetPassRecord } from '../context/shared';
 import { useHealth } from '../context/HealthContext';
 import { usePets } from '../context/PetsContext';
 import { useSession } from '../context/SessionContext';
 import { useAppNavigation } from '../navigation';
+import { TutorShell } from '../components/layout/TutorShell';
 
 type PreviewAttachment = {
   name: string;
@@ -121,104 +122,58 @@ export default function ExamsScreen() {
 
   if (!currentPet && user?.userType !== 'veterinarian') {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
+      <TutorShell active="exams" title="Exames e laudos" description="Nenhum pet selecionado no momento.">
+        <div className="mx-auto max-w-2xl rounded-[34px] border border-border/70 bg-card p-10 text-center shadow-[0_24px_60px_-36px_rgba(127,162,106,0.18)]">
           <p className="text-foreground mb-4">Nenhum pet selecionado</p>
-          <button onClick={goToPetContext} className="bg-primary text-white px-6 py-3 rounded-2xl">
-            Voltar
-          </button>
+          <button onClick={goToPetContext} className="rounded-[18px] bg-primary px-6 py-3 text-white transition-colors hover:bg-primary/90">Voltar</button>
         </div>
-      </div>
+      </TutorShell>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background pb-12">
-      <div className="bg-card border-b border-border">
-        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
-          <button
-            onClick={goToPetContext}
-            className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            <span>Voltar ao Perfil</span>
-          </button>
-          <span className="inline-flex items-center gap-2 rounded-full border border-border bg-muted/40 px-3 py-1 text-xs text-muted-foreground">
-            <ShieldCheck className="w-4 h-4" />
-            Vet-Pass persistido no backend
-          </span>
-        </div>
-      </div>
-
-      <div className="max-w-5xl mx-auto px-6 mt-8 space-y-6">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center">
-            <FileText className="w-6 h-6 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-3xl text-foreground">Exames e Laudos</h1>
-            <p className="text-muted-foreground">Anexos do prontu·rio e compartilhamento controlado via Vet-Pass.</p>
-          </div>
-        </div>
-
+    <TutorShell active="exams" title="Exames e laudos" description="Anexos do prontu√°rio e compartilhamento controlado via Vet-Pass.">
+      <div className="space-y-6">
         {currentPet && (
           <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-            <div className="bg-card rounded-3xl shadow-lg p-5 border border-border">
-              <div className="flex items-center justify-between gap-3 mb-4">
+            <section className="rounded-[34px] border border-border/70 bg-card p-5 shadow-[0_24px_60px_-36px_rgba(127,162,106,0.18)] sm:p-6">
+              <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
                   <h2 className="text-xl text-foreground">Anexos de {currentPet.name}</h2>
-                  <p className="text-sm text-muted-foreground">Selecione os laudos que deseja liberar para um veterin·rio.</p>
+                  <p className="text-sm text-muted-foreground">Selecione os laudos que deseja liberar para um veterin√°rio.</p>
                 </div>
                 <div className="flex gap-2">
-                  <button type="button" onClick={() => setSelectedKeys(attachments.map((attachment) => attachment.key))} className="rounded-full border border-border px-3 py-1 text-xs text-foreground">
-                    Selecionar todos
-                  </button>
-                  <button type="button" onClick={() => setSelectedKeys([])} className="rounded-full border border-border px-3 py-1 text-xs text-foreground">
-                    Limpar
-                  </button>
+                  <button type="button" onClick={() => setSelectedKeys(attachments.map((attachment) => attachment.key))} className="rounded-full border border-border px-3 py-1 text-xs text-foreground">Selecionar todos</button>
+                  <button type="button" onClick={() => setSelectedKeys([])} className="rounded-full border border-border px-3 py-1 text-xs text-foreground">Limpar</button>
                 </div>
               </div>
 
               {attachments.length === 0 ? (
-                <div className="rounded-2xl border border-border bg-muted/20 p-6 text-center">
+                <div className="rounded-[28px] border border-border bg-muted/20 p-6 text-center">
                   <p className="text-muted-foreground">Nenhum anexo de exame encontrado para este pet.</p>
-                  <p className="mt-2 text-sm text-muted-foreground">Os arquivos enviados no prontu·rio mÈdico aparecem aqui.</p>
+                  <p className="mt-2 text-sm text-muted-foreground">Os arquivos enviados no prontu√°rio m√©dico aparecem aqui.</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   {attachments.map((attachment, index) => {
                     const checked = selectedKeys.includes(attachment.key);
                     return (
-                      <div key={`${attachment.name}-${attachment.recordDate}-${index}`} className={`rounded-3xl border p-5 ${checked ? 'border-primary bg-primary/5' : 'border-border bg-card'}`}>
-                        <label className="flex items-start gap-3 cursor-pointer">
+                      <div key={`${attachment.name}-${attachment.recordDate}-${index}`} className={`rounded-[28px] border p-5 ${checked ? 'border-primary bg-primary/5' : 'border-border bg-card'}`}>
+                        <label className="flex cursor-pointer items-start gap-3">
                           <input type="checkbox" checked={checked} onChange={() => setSelectedKeys((prev) => prev.includes(attachment.key) ? prev.filter((item) => item !== attachment.key) : [...prev, attachment.key])} className="mt-1 h-4 w-4 rounded border-border text-primary" />
-                          <div className="flex-1 min-w-0">
+                          <div className="min-w-0 flex-1">
                             <div className="flex items-start gap-3">
-                              <div className="w-11 h-11 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
-                                <Paperclip className="w-5 h-5 text-primary" />
+                              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                                <Paperclip className="h-5 w-5" />
                               </div>
                               <div className="min-w-0 flex-1">
-                                <p className="text-foreground break-words">{attachment.name}</p>
-                                <p className="text-xs text-muted-foreground mt-1">{attachment.type} ï {bytesToLabel(attachment.size)}</p>
+                                <p className="break-words text-foreground">{attachment.name}</p>
+                                <p className="mt-1 text-xs text-muted-foreground">{attachment.type} ‚Ä¢ {bytesToLabel(attachment.size)}</p>
                               </div>
                             </div>
                             <div className="mt-4 flex flex-wrap gap-2">
-                              <button
-                                type="button"
-                                onClick={() => setPreviewAttachment(attachment)}
-                                className="inline-flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
-                              >
-                                <Eye className="w-4 h-4" />
-                                Visualizar
-                              </button>
-                              <a
-                                href={attachment.dataUrl}
-                                download={attachment.name}
-                                className="inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-sm text-white hover:bg-primary/90 transition-colors"
-                              >
-                                <Download className="w-4 h-4" />
-                                Baixar
-                              </a>
+                              <button type="button" onClick={() => setPreviewAttachment(attachment)} className="inline-flex items-center gap-2 rounded-[18px] border border-border bg-background px-3 py-2 text-sm text-foreground transition-colors hover:bg-muted"><Eye className="h-4 w-4" />Visualizar</button>
+                              <a href={attachment.dataUrl} download={attachment.name} className="inline-flex items-center gap-2 rounded-[18px] bg-primary px-3 py-2 text-sm text-white transition-colors hover:bg-primary/90"><Download className="h-4 w-4" />Baixar</a>
                             </div>
                           </div>
                         </label>
@@ -227,96 +182,87 @@ export default function ExamsScreen() {
                   })}
                 </div>
               )}
-            </div>
+            </section>
 
             <div className="space-y-4">
-              <div className="bg-card rounded-3xl shadow-lg p-5 border border-border">
-                <h2 className="text-xl text-foreground mb-2">Gerar Vet-Pass</h2>
-                <p className="text-sm text-muted-foreground mb-4">O cÛdigo libera apenas os anexos selecionados por 30 dias.</p>
-                <button
-                  type="button"
-                  onClick={() => void handleGenerateVetPass()}
-                  disabled={attachments.length === 0 || selectedKeys.length === 0}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-white disabled:opacity-50"
-                >
-                  <ShieldCheck className="w-4 h-4" />
-                  Gerar cÛdigo
+              <section className="rounded-[34px] border border-border/70 bg-card p-5 shadow-[0_24px_60px_-36px_rgba(127,162,106,0.18)]">
+                <h2 className="mb-2 text-xl text-foreground">Gerar Vet-Pass</h2>
+                <p className="mb-4 text-sm text-muted-foreground">O c√≥digo libera apenas os anexos selecionados por 30 dias.</p>
+                <button type="button" onClick={() => void handleGenerateVetPass()} disabled={attachments.length === 0 || selectedKeys.length === 0} className="inline-flex w-full items-center justify-center gap-2 rounded-[18px] bg-primary px-4 py-3 text-white transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50">
+                  <ShieldCheck className="h-4 w-4" />
+                  Gerar c√≥digo
                 </button>
                 {createdPass && (
-                  <div className="mt-4 rounded-2xl border border-primary/20 bg-primary/5 p-4">
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">CÛdigo gerado</p>
+                  <div className="mt-4 rounded-[28px] border border-primary/20 bg-primary/5 p-4">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">C√≥digo gerado</p>
                     <div className="mt-2 flex items-center justify-between gap-3">
-                      <p className="font-mono text-sm text-foreground break-all">{createdPass.code}</p>
-                      <button type="button" onClick={() => navigator.clipboard?.writeText(createdPass.code)} className="rounded-full border border-border bg-background px-3 py-1.5 text-xs text-foreground inline-flex items-center gap-2">
-                        <Copy className="w-3.5 h-3.5" />
+                      <p className="break-all font-mono text-sm text-foreground">{createdPass.code}</p>
+                      <button type="button" onClick={() => navigator.clipboard?.writeText(createdPass.code)} className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-xs text-foreground">
+                        <Copy className="h-3.5 w-3.5" />
                         Copiar
                       </button>
                     </div>
                   </div>
                 )}
-              </div>
+              </section>
 
               {user?.userType === 'veterinarian' && (
-                <div className="bg-card rounded-3xl shadow-lg p-5 border border-border">
-                  <h2 className="text-xl text-foreground mb-2">Acessar Vet-Pass</h2>
-                  <p className="text-sm text-muted-foreground mb-4">Digite o cÛdigo recebido para abrir os laudos liberados.</p>
+                <section className="rounded-[34px] border border-border/70 bg-card p-5 shadow-[0_24px_60px_-36px_rgba(127,162,106,0.18)]">
+                  <h2 className="mb-2 text-xl text-foreground">Acessar Vet-Pass</h2>
+                  <p className="mb-4 text-sm text-muted-foreground">Digite o c√≥digo recebido para abrir os laudos liberados.</p>
                   <div className="flex gap-2">
                     <input
                       value={vetPassCode}
                       onChange={(event) => setVetPassCode(event.target.value.toUpperCase())}
                       placeholder="VET-..."
-                      className="flex-1 rounded-2xl border border-border bg-input px-4 py-3 uppercase tracking-wider text-foreground"
+                      className="flex-1 rounded-[18px] border border-border bg-[#efe9de] px-4 py-3 uppercase tracking-wider text-foreground outline-none transition-colors focus:border-primary"
                     />
-                    <button type="button" onClick={() => void handleRedeemVetPass()} className="rounded-2xl bg-primary px-4 py-3 text-white">
-                      Abrir
-                    </button>
+                    <button type="button" onClick={() => void handleRedeemVetPass()} className="rounded-[18px] bg-primary px-4 py-3 text-white transition-colors hover:bg-primary/90">Abrir</button>
                   </div>
-                </div>
+                </section>
               )}
 
               {(createdPass || redeemedPass) && (
-                <div className="bg-card rounded-3xl shadow-lg p-5 border border-border">
-                  <h2 className="text-xl text-foreground mb-4">Vet-Pass ativo</h2>
+                <section className="rounded-[34px] border border-border/70 bg-card p-5 shadow-[0_24px_60px_-36px_rgba(127,162,106,0.18)]">
+                  <h2 className="mb-4 text-xl text-foreground">Vet-Pass ativo</h2>
                   {(createdPass ? [createdPass] : []).concat(redeemedPass ? [redeemedPass] : []).map((pass) => (
-                    <div key={pass.code} className="rounded-2xl border border-border bg-muted/20 p-4">
+                    <div key={pass.code} className="rounded-[28px] border border-border bg-muted/20 p-4">
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <p className="text-foreground">{pass.petName}</p>
-                          <p className="text-xs text-muted-foreground">CÛdigo: {pass.code}</p>
+                          <p className="text-xs text-muted-foreground">C√≥digo: {pass.code}</p>
                           <p className="text-xs text-muted-foreground">Expira em {new Date(pass.expiresAt).toLocaleDateString('pt-BR')}</p>
                         </div>
                         <span className="rounded-full bg-primary/10 px-3 py-1 text-xs text-primary">{pass.documents.length} anexos</span>
                       </div>
                     </div>
                   ))}
-                </div>
+                </section>
               )}
             </div>
           </div>
         )}
 
         {user?.userType === 'veterinarian' && !currentPet && redeemedPass && (
-          <div className="bg-card rounded-3xl shadow-lg p-5 border border-border">
-            <h2 className="text-xl text-foreground mb-4">Vet-Pass resgatado</h2>
-            <div className="rounded-2xl border border-border bg-muted/20 p-4">
+          <section className="rounded-[34px] border border-border/70 bg-card p-5 shadow-[0_24px_60px_-36px_rgba(127,162,106,0.18)]">
+            <h2 className="mb-4 text-xl text-foreground">Vet-Pass resgatado</h2>
+            <div className="rounded-[28px] border border-border bg-muted/20 p-4">
               <p className="text-foreground">{redeemedPass.petName}</p>
               <p className="text-sm text-muted-foreground">{redeemedPass.documents.length} anexos liberados</p>
             </div>
-          </div>
+          </section>
         )}
       </div>
 
       {previewAttachment && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" onClick={() => setPreviewAttachment(null)}>
-          <div className="w-full max-w-4xl overflow-hidden rounded-3xl bg-card border border-border shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-4xl overflow-hidden rounded-[32px] border border-border bg-card shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between gap-4 border-b border-border px-5 py-4">
               <div>
                 <h3 className="text-lg text-foreground">{previewAttachment.name}</h3>
                 <p className="text-xs text-muted-foreground">{previewAttachment.type}</p>
               </div>
-              <button type="button" onClick={() => setPreviewAttachment(null)} className="rounded-full border border-border bg-background px-3 py-1.5 text-sm text-foreground hover:bg-muted transition-colors">
-                Fechar
-              </button>
+              <button type="button" onClick={() => setPreviewAttachment(null)} className="rounded-full border border-border bg-background px-3 py-1.5 text-sm text-foreground transition-colors hover:bg-muted">Fechar</button>
             </div>
 
             <div className="max-h-[80vh] bg-muted/30 p-4">
@@ -324,19 +270,19 @@ export default function ExamsScreen() {
                 <img
                   src={previewAttachment.dataUrl}
                   alt={previewAttachment.name}
-                  className="mx-auto max-h-[75vh] w-auto max-w-full rounded-2xl border border-border bg-background object-contain"
+                  className="mx-auto max-h-[75vh] w-auto max-w-full rounded-[24px] border border-border bg-background object-contain"
                 />
               ) : (
                 <iframe
                   src={previewAttachment.dataUrl}
                   title={previewAttachment.name}
-                  className="h-[75vh] w-full rounded-2xl border border-border bg-background"
+                  className="h-[75vh] w-full rounded-[24px] border border-border bg-background"
                 />
               )}
             </div>
           </div>
         </div>
       )}
-    </div>
+    </TutorShell>
   );
 }
