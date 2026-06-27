@@ -66,13 +66,14 @@ router.get('/catalog', requireAuth, async (req, res, next) => {
     const type = asTrimmedString(req.query.type).toLowerCase();
     const query = asTrimmedString(req.query.query);
     const specialty = asTrimmedString(req.query.specialty);
+    const clinicId = asTrimmedString(req.query.clinicId);
 
     const shouldLoadClinics = type === '' || type === 'clinic' || type === 'all';
     const shouldLoadVeterinarians = type === '' || type === 'veterinarian' || type === 'all';
 
     const [clinics, veterinarians] = await Promise.all([
       shouldLoadClinics ? listClinicProfiles(query) : Promise.resolve([]),
-      shouldLoadVeterinarians ? listVeterinarianProfiles(query, specialty) : Promise.resolve([]),
+      shouldLoadVeterinarians ? listVeterinarianProfiles(query, specialty, clinicId) : Promise.resolve([]),
     ]);
 
     res.json({
@@ -85,6 +86,7 @@ router.get('/catalog', requireAuth, async (req, res, next) => {
           connectionCode: clinic.connection_code,
           address: clinic.address,
           services: clinic.services,
+          workingHours: clinic.working_hours,
         })),
         ...veterinarians.map((veterinarian) => ({
           id: veterinarian.id,
@@ -93,6 +95,7 @@ router.get('/catalog', requireAuth, async (req, res, next) => {
           specialty: veterinarian.specialty,
           crmv: veterinarian.crmv,
           crmvUf: veterinarian.crmv_uf,
+          clinicName: veterinarian.clinic_name ?? undefined,
         })),
       ],
     });
@@ -328,11 +331,32 @@ router.patch('/:id', requireAuth, async (req: AuthRequest, res, next) => {
   await updateTutorProfileHandler(req, res, next, String(req.params.id));
 });
 
-async function deleteTutorProfileHandler(req: AuthRequest, res: any, next: any, userId: string) {
+async function deactivateCurrentUserHandler(req: AuthRequest, res: any, next: any, userId: string) {
   const connection = await pool.getConnection();
 
   try {
-    if (req.user?.userType !== 'tutor' || req.user.id !== userId) {
+    if (!req.user || req.user.id !== userId) {
+      res.status(403).json({ message: 'Forbidden' });
+      return;
+    }
+
+    await connection.beginTransaction();
+    await connection.execute('UPDATE users SET is_active = 0 WHERE id = ?', [userId]);
+    await connection.commit();
+    res.status(204).send();
+  } catch (err) {
+    await connection.rollback();
+    next(err);
+  } finally {
+    connection.release();
+  }
+}
+
+async function deleteCurrentUserHandler(req: AuthRequest, res: any, next: any, userId: string) {
+  const connection = await pool.getConnection();
+
+  try {
+    if (!req.user || req.user.id !== userId) {
       res.status(403).json({ message: 'Forbidden' });
       return;
     }
@@ -345,7 +369,7 @@ async function deleteTutorProfileHandler(req: AuthRequest, res: any, next: any, 
     await connection.rollback();
     if (err?.code === 'ER_ROW_IS_REFERENCED_2') {
       res.status(409).json({
-        message: 'Cannot delete tutor profile while it is referenced by other records',
+        message: 'Cannot delete account while it is referenced by other records',
       });
       return;
     }
@@ -356,13 +380,18 @@ async function deleteTutorProfileHandler(req: AuthRequest, res: any, next: any, 
   }
 }
 
+router.patch('/me/deactivate', requireAuth, async (req: AuthRequest, res, next) => {
+  await deactivateCurrentUserHandler(req, res, next, req.user?.id ?? '');
+});
+
 router.delete('/me', requireAuth, async (req: AuthRequest, res, next) => {
-  await deleteTutorProfileHandler(req, res, next, req.user?.id ?? '');
+  await deleteCurrentUserHandler(req, res, next, req.user?.id ?? '');
 });
 
 router.delete('/:id', requireAuth, async (req: AuthRequest, res, next) => {
-  await deleteTutorProfileHandler(req, res, next, String(req.params.id));
+  await deleteCurrentUserHandler(req, res, next, String(req.params.id));
 });
 
 export default router;
+
 

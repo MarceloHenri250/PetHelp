@@ -1,7 +1,10 @@
 ﻿import React, { useState } from 'react';
-import { ArrowLeft, Calendar, Download, Eye, FileText, Paperclip, Pencil, Plus, ShieldAlert, Trash2, Upload, X } from 'lucide-react';
+import { ArrowLeft, Calendar, Download, Eye, FileText, Paperclip, Pencil, Plus, ShieldAlert, Star, Trash2, Upload, X } from 'lucide-react';
 import { decodeExamDocument, encodeExamDocument } from '../context/shared';
 import { useHealth } from '../context/HealthContext';
+import { useReviews } from '../context/ReviewsContext';
+import { useSession } from '../context/SessionContext';
+import VeterinarianShell from '../components/layout/VeterinarianShell';
 import { usePets } from '../context/PetsContext';
 import { useAppNavigation } from '../navigation';
 import { TutorShell } from '../components/layout/TutorShell';
@@ -53,7 +56,11 @@ function isSupportedFile(file: File) {
 export default function MedicalHistoryScreen() {
   const { currentPet } = usePets();
   const { medicalRecords, addMedicalRecord, updateMedicalRecord, deleteMedicalRecord } = useHealth();
+  const { getVeterinarianAverage, getVeterinarianReviews } = useReviews();
+  const { user } = useSession();
   const { goToPetContext } = useAppNavigation();
+  const isVeterinarian = user?.userType === 'veterinarian';
+  const [vetTab, setVetTab] = useState<'consults' | 'reviews'>('consults');
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [originalDocuments, setOriginalDocuments] = useState<string[]>([]);
@@ -67,6 +74,102 @@ export default function MedicalHistoryScreen() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
+  if (isVeterinarian) {
+    const sortedVeterinarianRecords = medicalRecords.slice().sort((left, right) => new Date(right.date).getTime() - new Date(left.date).getTime());
+    const veterinarianReviews = getVeterinarianReviews(user?.id ?? '');
+    const veterinarianAverage = getVeterinarianAverage(user?.id ?? '');
+
+    return (
+      <VeterinarianShell active="history" title="Histórico & Avaliações" description="Consulte atendimentos recentes e avaliações deixadas pelos tutores.">
+        <div className="space-y-6">
+          <section className="grid gap-4 sm:grid-cols-3">
+            <div className="rounded-[28px] border border-border/70 bg-card p-6 shadow-[0_24px_60px_-36px_rgba(127,162,106,0.18)]">
+              <p className="text-sm text-muted-foreground">Consultas</p>
+              <p className="mt-2 text-3xl text-foreground">{sortedVeterinarianRecords.length}</p>
+              <p className="text-sm text-muted-foreground">Registros clínicos</p>
+            </div>
+            <div className="rounded-[28px] border border-border/70 bg-card p-6 shadow-[0_24px_60px_-36px_rgba(127,162,106,0.18)]">
+              <p className="text-sm text-muted-foreground">Avaliações</p>
+              <p className="mt-2 text-3xl text-foreground">{veterinarianReviews.length}</p>
+              <p className="text-sm text-muted-foreground">Notas recebidas</p>
+            </div>
+            <div className="rounded-[28px] border border-border/70 bg-card p-6 shadow-[0_24px_60px_-36px_rgba(127,162,106,0.18)]">
+              <p className="text-sm text-muted-foreground">Média</p>
+              <p className="mt-2 text-3xl text-foreground">{veterinarianAverage > 0 ? veterinarianAverage.toFixed(1) : '0.0'}</p>
+              <p className="text-sm text-muted-foreground">Reputação geral</p>
+            </div>
+          </section>
+
+          <section className="rounded-[34px] border border-border/70 bg-card p-6 shadow-[0_24px_60px_-36px_rgba(127,162,106,0.18)] sm:p-8">
+            <div className="flex items-center gap-8 border-b border-border/80">
+              <button type="button" onClick={() => setVetTab('consults')} className={`relative pb-4 pt-2 text-[18px] font-medium transition-colors ${vetTab === 'consults' ? 'text-primary' : 'text-[#7b6e61]'}`}>
+                Consultas realizadas
+                {vetTab === 'consults' ? <span className="absolute inset-x-0 bottom-[-1px] h-[2px] rounded-full bg-primary" /> : null}
+              </button>
+              <button type="button" onClick={() => setVetTab('reviews')} className={`relative pb-4 pt-2 text-[18px] font-medium transition-colors ${vetTab === 'reviews' ? 'text-primary' : 'text-[#7b6e61]'}`}>
+                Avaliações recebidas
+                {vetTab === 'reviews' ? <span className="absolute inset-x-0 bottom-[-1px] h-[2px] rounded-full bg-primary" /> : null}
+              </button>
+            </div>
+
+            {vetTab === 'consults' ? (
+              <div className="mt-6 space-y-4">
+                {sortedVeterinarianRecords.length === 0 ? (
+                  <div className="rounded-[28px] border border-dashed border-border bg-muted/30 p-5 text-sm text-muted-foreground">Nenhum atendimento encontrado para este veterinário.</div>
+                ) : (
+                  sortedVeterinarianRecords.map((record) => {
+                    const attachments = (record.documents ?? []).length;
+
+                    return (
+                      <article key={record.id} className="rounded-[28px] border border-border/70 bg-card p-5 shadow-[0_18px_42px_-30px_rgba(127,162,106,0.2)]">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                          <div>
+                            <p className="text-lg text-foreground">{record.clinicName || 'Atendimento clínico'}</p>
+                            <p className="text-sm text-muted-foreground">{record.veterinarianName || 'Veterinário responsável'}{record.addedBy ? ` · ${record.addedBy}` : ''}</p>
+                          </div>
+                          <p className="text-sm text-muted-foreground">{formatDateLabel(record.date)}</p>
+                        </div>
+                        <p className="mt-4 text-sm leading-relaxed text-foreground">{record.description}</p>
+                        {record.treatment ? <p className="mt-3 rounded-2xl border border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">{record.treatment}</p> : null}
+                        <div className="mt-4 flex items-center justify-between gap-3 text-xs text-muted-foreground">
+                          <span className="rounded-full border border-border bg-background px-3 py-1">{attachments} anexo{attachments === 1 ? '' : 's'}</span>
+                          <span className="rounded-full border border-border bg-background px-3 py-1">{record.petId}</span>
+                        </div>
+                      </article>
+                    );
+                  })
+                )}
+              </div>
+            ) : (
+              <div className="mt-6 space-y-4">
+                {veterinarianReviews.length === 0 ? (
+                  <div className="rounded-[28px] border border-dashed border-border bg-muted/30 p-5 text-sm text-muted-foreground">Nenhuma avaliação recebida ainda.</div>
+                ) : (
+                  veterinarianReviews.map((review) => (
+                    <article key={review.id} className="rounded-[28px] border border-border/70 bg-card p-5 shadow-[0_18px_42px_-30px_rgba(127,162,106,0.2)]">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <p className="text-lg text-foreground">{review.tutorName} · {review.petId}</p>
+                          <p className="text-sm text-muted-foreground">{review.clinicName || 'Atendimento particular'}</p>
+                        </div>
+                        <div className="flex items-center gap-1 text-primary">
+                          {Array.from({ length: 5 }).map((_, index) => (
+                            <Star key={index} className={`h-5 w-5 ${index < review.rating ? 'fill-current' : 'text-[#e0d9cf]'}`} />
+                          ))}
+                        </div>
+                      </div>
+                      <p className="mt-4 text-sm italic text-foreground">“{review.comment}”</p>
+                      <p className="mt-2 text-xs text-muted-foreground">{new Date(review.updatedAt).toLocaleDateString('pt-BR')}</p>
+                    </article>
+                  ))
+                )}
+              </div>
+            )}
+          </section>
+        </div>
+      </VeterinarianShell>
+    );
+  }
   if (!currentPet) {
     return (
       <TutorShell active="records" title="Histórico médico" description="Nenhum pet selecionado no momento.">
@@ -371,3 +474,5 @@ export default function MedicalHistoryScreen() {
     </TutorShell>
   );
 }
+
+

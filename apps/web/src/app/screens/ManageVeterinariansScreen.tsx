@@ -1,24 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router';
-import {
-  ArrowLeft,
-  CalendarDays,
-  CheckCircle2,
-  ClipboardList,
-  Clock3,
-  Edit3,
-  Mail,
-  Plus,
-  Save,
-  Stethoscope,
-  Trash2,
-  Users,
-} from 'lucide-react';
-import ClinicTopBar from './ClinicTopBar';
-import { useInteraction } from '../context/InteractionContext';
+﻿import React, { useEffect, useMemo, useState } from 'react';
+import { CheckCircle2, Mail, ShieldCheck, Stethoscope, Trash2, Users } from 'lucide-react';
+import { ClinicShell } from '../components/layout/ClinicShell';
 import { useSession } from '../context/SessionContext';
 import { getApiBase, getAuthHeaders } from '../context/shared';
-import { useAppNavigation, useDashboardBackLogout } from '../navigation';
+import { useDashboardBackLogout } from '../navigation';
 
 type ClinicLink = {
   id: string;
@@ -33,55 +18,41 @@ type ClinicLink = {
   veterinarianCrmvUf: string;
 };
 
-type AvailabilitySlot = {
-  id: string;
-  day: string;
-  start: string;
-  end: string;
-};
-
-type VetSchedule = {
-  specialty: string;
-  slots: AvailabilitySlot[];
-};
-
-const days = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
-
-const createSlotId = () => Math.random().toString(36).slice(2, 10);
+type TabKey = 'connect' | 'active' | 'pending';
 
 export default function ManageVeterinariansScreen() {
-  const navigate = useNavigate();
   const { user } = useSession();
-  const { notifications } = useInteraction();
-  const { confirmAndLogout } = useAppNavigation();
+  useDashboardBackLogout();
+
+  const [tab, setTab] = useState<TabKey>('connect');
   const [inviteEmail, setInviteEmail] = useState('');
   const [links, setLinks] = useState<ClinicLink[]>([]);
-  const [scheduleMap, setScheduleMap] = useState<Record<string, VetSchedule>>({});
-  const [selectedVetId, setSelectedVetId] = useState('');
-  const [draftSpecialty, setDraftSpecialty] = useState('');
-  const [draftDay, setDraftDay] = useState(days[0]);
-  const [draftStart, setDraftStart] = useState('08:00');
-  const [draftEnd, setDraftEnd] = useState('12:00');
-  const [editingSlotId, setEditingSlotId] = useState<string | null>(null);
   const [savingInvite, setSavingInvite] = useState(false);
+  const [savingLinkId, setSavingLinkId] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const API_BASE = getApiBase();
-  const storageKey = user?.id ? `clinic-vet-schedules:${user.id}` : null;
-
-  useDashboardBackLogout();
 
   useEffect(() => {
     let cancelled = false;
 
     const loadLinks = async () => {
-      const resp = await fetch(`${API_BASE}/api/clinic-links/me`, {
-        headers: getAuthHeaders(),
-      });
+      try {
+        const resp = await fetch(`${API_BASE}/api/clinic-links/me`, {
+          headers: getAuthHeaders(),
+        });
 
-      if (!resp.ok) return;
+        if (!resp.ok) {
+          if (!cancelled) setLinks([]);
+          return;
+        }
 
-      const { data } = await resp.json();
-      if (!cancelled) {
-        setLinks((data ?? []) as ClinicLink[]);
+        const { data } = await resp.json();
+        if (!cancelled) {
+          setLinks((data ?? []) as ClinicLink[]);
+        }
+      } catch (error) {
+        console.error('Falha ao carregar vÃ­nculos da clÃ­nica:', error);
+        if (!cancelled) setLinks([]);
       }
     };
 
@@ -92,58 +63,21 @@ export default function ManageVeterinariansScreen() {
     };
   }, [API_BASE]);
 
-  useEffect(() => {
-    if (!storageKey) return;
-
-    try {
-      const raw = localStorage.getItem(storageKey);
-      if (!raw) return;
-      setScheduleMap(JSON.parse(raw) as Record<string, VetSchedule>);
-    } catch (error) {
-      console.error('Falha ao carregar agendas dos veterinários:', error);
-    }
-  }, [storageKey]);
-
-  useEffect(() => {
-    if (!storageKey) return;
-    localStorage.setItem(storageKey, JSON.stringify(scheduleMap));
-  }, [scheduleMap, storageKey]);
-
-  const unreadNotifications = notifications.filter((notification) => !notification.read).length;
-  const clinicName = user?.clinicName || user?.name || 'Clínica';
+  const clinicName = user?.clinicName || user?.name || 'ClÃ­nica';
   const approvedLinks = useMemo(() => links.filter((link) => link.status === 'approved'), [links]);
   const pendingLinks = useMemo(() => links.filter((link) => link.status === 'pending'), [links]);
-  const selectedVet = approvedLinks.find((link) => link.veterinarianId === selectedVetId) ?? null;
-  const currentSchedule = selectedVet ? scheduleMap[selectedVet.veterinarianId] ?? { specialty: '', slots: [] } : { specialty: '', slots: [] };
 
-  useEffect(() => {
-    if (approvedLinks.length === 0) {
-      setSelectedVetId('');
+  const handleInvite = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setFeedback(null);
+
+    const email = inviteEmail.trim().toLowerCase();
+    if (!email) {
+      setFeedback({ type: 'error', message: 'Informe o e-mail do veterinÃ¡rio.' });
       return;
     }
 
-    if (!selectedVetId || !approvedLinks.some((link) => link.veterinarianId === selectedVetId)) {
-      setSelectedVetId(approvedLinks[0].veterinarianId);
-    }
-  }, [approvedLinks, selectedVetId]);
-
-  useEffect(() => {
-    if (!selectedVet) return;
-
-    const schedule = scheduleMap[selectedVet.veterinarianId];
-    setDraftSpecialty(schedule?.specialty ?? '');
-  }, [selectedVet, scheduleMap]);
-
-  const handleLogout = () => {
-    confirmAndLogout();
-  };
-
-  const handleInvite = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inviteEmail.trim()) return;
-
     setSavingInvite(true);
-
     try {
       const resp = await fetch(`${API_BASE}/api/clinic-links/request`, {
         method: 'POST',
@@ -151,11 +85,12 @@ export default function ManageVeterinariansScreen() {
           'Content-Type': 'application/json',
           ...getAuthHeaders(),
         },
-        body: JSON.stringify({ veterinarianEmail: inviteEmail.trim().toLowerCase() }),
+        body: JSON.stringify({ veterinarianEmail: email }),
       });
 
       if (!resp.ok) {
-        throw new Error((await resp.json()).message ?? 'Request failed');
+        const payload = await resp.json().catch(() => null);
+        throw new Error(payload?.message ?? 'Request failed');
       }
 
       const { data } = await resp.json();
@@ -164,285 +99,309 @@ export default function ManageVeterinariansScreen() {
       }
 
       setInviteEmail('');
+      setFeedback({ type: 'success', message: 'Convite enviado com sucesso.' });
+      setTab('pending');
     } catch (error) {
-      console.error('Falha ao convidar veterinário:', error);
+      console.error('Falha ao convidar veterinÃ¡rio:', error);
+      setFeedback({ type: 'error', message: 'NÃ£o foi possÃ­vel enviar o convite.' });
     } finally {
       setSavingInvite(false);
     }
   };
 
-  const persistSchedule = (vetId: string, nextSchedule: VetSchedule) => {
-    setScheduleMap((prev) => ({
-      ...prev,
-      [vetId]: nextSchedule,
-    }));
-  };
+  const handleUpdateLinkStatus = async (linkId: string, nextStatus: 'approved' | 'rejected') => {
+    if (savingLinkId) return;
 
-  const handleSaveSpecialty = () => {
-    if (!selectedVet) return;
-    persistSchedule(selectedVet.veterinarianId, {
-      ...currentSchedule,
-      specialty: draftSpecialty.trim(),
-    });
-  };
+    setSavingLinkId(linkId);
+    setFeedback(null);
 
-  const handleAddOrUpdateSlot = () => {
-    if (!selectedVet) return;
-    if (!draftDay || !draftStart || !draftEnd) return;
+    try {
+      const resp = await fetch(`${API_BASE}/api/clinic-links/${linkId}/${nextStatus === 'approved' ? 'approve' : 'reject'}`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+      });
 
-    const nextSlot: AvailabilitySlot = {
-      id: editingSlotId ?? createSlotId(),
-      day: draftDay,
-      start: draftStart,
-      end: draftEnd,
-    };
+      if (!resp.ok) {
+        const payload = await resp.json().catch(() => null);
+        throw new Error(payload?.message ?? 'Request failed');
+      }
 
-    const existingSlots = currentSchedule.slots ?? [];
-    const nextSlots = editingSlotId
-      ? existingSlots.map((slot) => (slot.id === editingSlotId ? nextSlot : slot))
-      : [...existingSlots, nextSlot];
+      const { data } = await resp.json();
+      if (data) {
+        setLinks((prev) => [data as ClinicLink, ...prev.filter((link) => link.id !== data.id)]);
+      }
 
-    persistSchedule(selectedVet.veterinarianId, {
-      specialty: draftSpecialty.trim(),
-      slots: nextSlots,
-    });
-
-    setEditingSlotId(null);
-    setDraftDay(days[0]);
-    setDraftStart('08:00');
-    setDraftEnd('12:00');
-  };
-
-  const handleEditSlot = (slot: AvailabilitySlot) => {
-    setEditingSlotId(slot.id);
-    setDraftDay(slot.day);
-    setDraftStart(slot.start);
-    setDraftEnd(slot.end);
-  };
-
-  const handleDeleteSlot = (slotId: string) => {
-    if (!selectedVet) return;
-
-    persistSchedule(selectedVet.veterinarianId, {
-      specialty: draftSpecialty.trim(),
-      slots: currentSchedule.slots.filter((slot) => slot.id !== slotId),
-    });
-
-    if (editingSlotId === slotId) {
-      setEditingSlotId(null);
+      setFeedback({ type: 'success', message: nextStatus === 'approved' ? 'VÃ­nculo aprovado.' : 'VÃ­nculo recusado.' });
+    } catch (error) {
+      console.error(`Falha ao ${nextStatus === 'approved' ? 'aprovar' : 'recusar'} vÃ­nculo:`, error);
+      setFeedback({ type: 'error', message: 'NÃ£o foi possÃ­vel atualizar o vÃ­nculo.' });
+    } finally {
+      setSavingLinkId(null);
     }
   };
 
-  const selectedVetLabel = selectedVet ? `${selectedVet.veterinarianName} • CRMV ${selectedVet.veterinarianCrmv}/${selectedVet.veterinarianCrmvUf}` : 'Nenhum veterinário selecionado';
+  const handleRemoveLink = async (linkId: string) => {
+    if (savingLinkId) return;
+
+    setSavingLinkId(linkId);
+    setFeedback(null);
+
+    try {
+      const resp = await fetch(`${API_BASE}/api/clinic-links/${linkId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      });
+
+      if (!(resp.ok || resp.status === 204)) {
+        const payload = await resp.json().catch(() => null);
+        throw new Error(payload?.message ?? 'Remove failed');
+      }
+
+      setLinks((prev) => prev.filter((link) => link.id !== linkId));
+      setFeedback({ type: 'success', message: 'VÃ­nculo removido.' });
+    } catch (error) {
+      console.error('Falha ao remover vÃ­nculo:', error);
+      setFeedback({ type: 'error', message: 'NÃ£o foi possÃ­vel remover o vÃ­nculo.' });
+    } finally {
+      setSavingLinkId(null);
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.10),_transparent_32%),linear-gradient(180deg,_#f8fbff_0%,_#ffffff_100%)]">
-      <ClinicTopBar
-        clinicName={clinicName}
-        notificationsCount={unreadNotifications}
-        onNotifications={() => navigate('/notifications')}
-        onSettings={() => navigate('/clinic-settings')}
-        onLogout={handleLogout}
-      />
+    <ClinicShell
+      active="veterinarians"
+      title="Gerenciar veterinÃ¡rios"
+      description="Convide profissionais, aprove vÃ­nculos pendentes e remova conexÃµes desnecessÃ¡rias."
+      actions={
+        <div className="rounded-full border border-border bg-card px-4 py-2 text-sm text-foreground">
+          {approvedLinks.length} ativo{approvedLinks.length === 1 ? '' : 's'}
+        </div>
+      }
+    >
+      <div className="space-y-6">
+        {feedback ? (
+          <div
+            className={`rounded-2xl border px-4 py-3 text-sm ${
+              feedback.type === 'success'
+                ? 'border-green-200 bg-green-50 text-green-700'
+                : 'border-red-200 bg-red-50 text-red-700'
+            }`}
+          >
+            {feedback.message}
+          </div>
+        ) : null}
 
-      <div className="max-w-6xl mx-auto px-6 py-8">
-        <button onClick={() => navigate('/clinic-dashboard')} className="mb-6 inline-flex items-center gap-2 text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="w-4 h-4" />
-          Voltar para a dashboard
-        </button>
+        <section className="grid gap-4 md:grid-cols-3">
+          <div className="rounded-[28px] border border-border/70 bg-card p-6 shadow-[0_24px_60px_-36px_rgba(127,162,106,0.18)]">
+            <p className="text-sm text-muted-foreground">ClÃ­nica</p>
+            <p className="mt-2 text-2xl font-medium text-foreground">{clinicName}</p>
+            <p className="mt-2 text-sm text-muted-foreground">Fluxo de vÃ­nculos e gestÃ£o de equipe vinculado ao painel da clÃ­nica.</p>
+          </div>
+          <div className="rounded-[28px] border border-border/70 bg-card p-6 shadow-[0_24px_60px_-36px_rgba(127,162,106,0.18)]">
+            <p className="text-sm text-muted-foreground">Ativos</p>
+            <p className="mt-2 text-3xl font-medium text-foreground">{approvedLinks.length}</p>
+            <p className="mt-2 text-sm text-muted-foreground">VeterinÃ¡rios jÃ¡ liberados.</p>
+          </div>
+          <div className="rounded-[28px] border border-border/70 bg-card p-6 shadow-[0_24px_60px_-36px_rgba(127,162,106,0.18)]">
+            <p className="text-sm text-muted-foreground">Pendentes</p>
+            <p className="mt-2 text-3xl font-medium text-foreground">{pendingLinks.length}</p>
+            <p className="mt-2 text-sm text-muted-foreground">Convites aguardando resposta.</p>
+          </div>
+        </section>
 
-        <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-          <section className="rounded-[28px] border border-border/60 bg-card p-6 shadow-lg shadow-slate-200/40">
-            <div className="flex items-start gap-4 mb-6">
-              <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center">
-                <Users className="w-7 h-7 text-primary" />
-              </div>
+        <section className="rounded-[32px] border border-border/70 bg-card p-6 shadow-[0_24px_60px_-36px_rgba(127,162,106,0.18)] sm:p-8">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <button
+              type="button"
+              onClick={() => setTab('connect')}
+              className={`rounded-[22px] border px-4 py-4 text-left transition-colors ${
+                tab === 'connect'
+                  ? 'border-primary bg-primary/10 text-primary'
+                  : 'border-border bg-background text-foreground hover:bg-muted'
+              }`}
+            >
+              <p className="text-sm font-medium">Convidar</p>
+              <p className="mt-1 text-xs opacity-80">Enviar convite por e-mail.</p>
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab('pending')}
+              className={`rounded-[22px] border px-4 py-4 text-left transition-colors ${
+                tab === 'pending'
+                  ? 'border-primary bg-primary/10 text-primary'
+                  : 'border-border bg-background text-foreground hover:bg-muted'
+              }`}
+            >
+              <p className="text-sm font-medium">Pendentes</p>
+              <p className="mt-1 text-xs opacity-80">Aprovar ou recusar solicitaÃ§Ãµes.</p>
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab('active')}
+              className={`rounded-[22px] border px-4 py-4 text-left transition-colors ${
+                tab === 'active'
+                  ? 'border-primary bg-primary/10 text-primary'
+                  : 'border-border bg-background text-foreground hover:bg-muted'
+              }`}
+            >
+              <p className="text-sm font-medium">Ativos</p>
+              <p className="mt-1 text-xs opacity-80">Lista de profissionais liberados.</p>
+            </button>
+          </div>
+        </section>
+
+        {tab === 'connect' ? (
+          <section className="rounded-[32px] border border-border/70 bg-card p-6 shadow-[0_24px_60px_-36px_rgba(127,162,106,0.18)] sm:p-8">
+            <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-sm text-muted-foreground">Gestão exclusiva</p>
-                <h1 className="text-3xl text-foreground">Veterinários vinculados</h1>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Convide profissionais, acompanhe vínculos ativos e configure disponibilidade por especialidade.
-                </p>
+                <p className="text-sm text-muted-foreground">Novo vÃ­nculo</p>
+                <h2 className="text-2xl font-medium text-foreground">Convidar veterinÃ¡rio</h2>
               </div>
+              <Mail className="h-6 w-6 text-primary" />
             </div>
 
-            <form onSubmit={handleInvite} className="space-y-3">
-              <label className="block text-sm text-foreground">Convidar por e-mail</label>
-              <div className="flex gap-3">
-                <div className="relative flex-1">
-                  <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <form onSubmit={handleInvite} className="mt-6 flex flex-col gap-4 lg:flex-row lg:items-end">
+              <div className="flex-1">
+                <label className="mb-2 block text-sm text-foreground">E-mail do veterinÃ¡rio</label>
+                <div className="relative">
+                  <Mail className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
                   <input
                     value={inviteEmail}
-                    onChange={(e) => setInviteEmail(e.target.value)}
+                    onChange={(event) => setInviteEmail(event.target.value)}
                     placeholder="veterinario@exemplo.com"
-                    className="w-full rounded-2xl border border-border bg-input py-3 pl-10 pr-4"
+                    className="w-full rounded-[18px] border border-border bg-[#efe9de] py-3 pl-12 pr-4 text-foreground outline-none transition-colors focus:border-primary"
                   />
                 </div>
-                <button type="submit" disabled={savingInvite} className="inline-flex items-center gap-2 rounded-2xl bg-primary px-5 py-3 text-white disabled:opacity-60">
-                  <Plus className="w-4 h-4" />
-                  {savingInvite ? 'Enviando...' : 'Convidar'}
-                </button>
               </div>
+
+              <button
+                type="submit"
+                disabled={savingInvite}
+                className="inline-flex items-center justify-center gap-2 rounded-[18px] bg-primary px-5 py-3 text-white transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <ShieldCheck className="h-4 w-4" />
+                {savingInvite ? 'Enviando...' : 'Enviar convite'}
+              </button>
             </form>
-
-            <div className="mt-6 rounded-2xl border border-border bg-muted/20 p-4">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-foreground">{approvedLinks.length} veterinário{approvedLinks.length === 1 ? '' : 's'} ativo{approvedLinks.length === 1 ? '' : 's'}</p>
-                  <p className="text-sm text-muted-foreground">{pendingLinks.length} solicitação{pendingLinks.length === 1 ? '' : 'ões'} pendente{pendingLinks.length === 1 ? '' : 's'}</p>
-                </div>
-                <ClipboardList className="w-5 h-5 text-primary" />
-              </div>
-            </div>
-
-            <div className="mt-5 space-y-3">
-              {approvedLinks.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-border bg-background p-4">
-                  <p className="text-sm text-muted-foreground">Nenhum veterinário ativo ainda.</p>
-                </div>
-              ) : (
-                approvedLinks.map((link) => {
-                  const isSelected = selectedVetId === link.veterinarianId;
-
-                  return (
-                    <button
-                      key={link.id}
-                      onClick={() => setSelectedVetId(link.veterinarianId)}
-                      className={`w-full rounded-2xl border px-4 py-4 text-left transition-colors ${
-                        isSelected ? 'border-primary/30 bg-primary/5' : 'border-border bg-background hover:bg-muted/60'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-foreground">{link.veterinarianName}</p>
-                          <p className="text-sm text-muted-foreground">{link.veterinarianEmail}</p>
-                          <p className="text-xs text-muted-foreground">CRMV {link.veterinarianCrmv}/{link.veterinarianCrmvUf}</p>
-                        </div>
-                        {isSelected && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs text-primary">
-                            <CheckCircle2 className="h-3.5 w-3.5" />
-                            Selecionado
-                          </span>
-                        )}
-                      </div>
-                    </button>
-                  );
-                })
-              )}
-            </div>
           </section>
+        ) : null}
 
-          <section className="rounded-[28px] border border-border/60 bg-card p-6 shadow-lg shadow-slate-200/40">
-            <div className="flex items-start justify-between gap-4 mb-6">
-              <div>
-                <p className="text-sm text-muted-foreground">Agenda por profissional</p>
-                <h2 className="text-2xl text-foreground">{selectedVetLabel}</h2>
+        {tab === 'pending' ? (
+          <section className="space-y-4">
+            {pendingLinks.length === 0 ? (
+              <div className="rounded-[28px] border border-dashed border-border bg-card p-6 text-sm text-muted-foreground">
+                Nenhuma solicitaÃ§Ã£o pendente no momento.
               </div>
-              <div className="rounded-full bg-primary/10 px-3 py-1 text-xs text-primary">
-                {selectedVet ? 'Ativo' : 'Sem seleção'}
-              </div>
-            </div>
+            ) : null}
 
-            {selectedVet ? (
-              <div className="space-y-6">
-                <div className="rounded-2xl border border-border bg-muted/20 p-4">
-                  <div className="flex items-center gap-3 mb-3">
-                    <Stethoscope className="w-5 h-5 text-primary" />
-                    <h3 className="text-lg text-foreground">Especialidade</h3>
-                  </div>
-                  <div className="flex flex-col gap-3 sm:flex-row">
-                    <input
-                      value={draftSpecialty}
-                      onChange={(e) => setDraftSpecialty(e.target.value)}
-                      placeholder="Ex.: Dermatologia, Cardiologia, Clínica geral"
-                      className="flex-1 rounded-2xl border border-border bg-background px-4 py-3"
-                    />
-                    <button onClick={handleSaveSpecialty} className="inline-flex items-center gap-2 rounded-2xl border border-border bg-background px-4 py-3 text-foreground">
-                      <Save className="w-4 h-4" />
-                      Salvar especialidade
-                    </button>
-                  </div>
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    Esta informação prepara a filtragem da agenda do tutor por profissional e especialidade.
-                  </p>
+            {veterinarianPendingLinks.length > 0 ? (
+              <div className="space-y-3 rounded-[28px] border border-border/70 bg-card p-5 shadow-[0_24px_60px_-36px_rgba(127,162,106,0.18)]">
+                <div>
+                  <p className="text-sm text-muted-foreground">SolicitaÃ§Ãµes recebidas</p>
+                  <h3 className="text-xl text-foreground">Aguardar veterinÃ¡rios respondendo ao convite da clÃ­nica</h3>
                 </div>
-
-                <div className="rounded-2xl border border-border bg-muted/20 p-4">
-                  <div className="flex items-center gap-3 mb-4">
-                    <CalendarDays className="w-5 h-5 text-primary" />
-                    <h3 className="text-lg text-foreground">Cadastrar horários disponíveis</h3>
-                  </div>
-
-                  <div className="grid gap-3 md:grid-cols-4">
-                    <select value={draftDay} onChange={(e) => setDraftDay(e.target.value)} className="rounded-2xl border border-border bg-background px-4 py-3">
-                      {days.map((day) => (
-                        <option key={day} value={day}>
-                          {day}
-                        </option>
-                      ))}
-                    </select>
-                    <input type="time" value={draftStart} onChange={(e) => setDraftStart(e.target.value)} className="rounded-2xl border border-border bg-background px-4 py-3" />
-                    <input type="time" value={draftEnd} onChange={(e) => setDraftEnd(e.target.value)} className="rounded-2xl border border-border bg-background px-4 py-3" />
-                    <button onClick={handleAddOrUpdateSlot} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-white">
-                      <Plus className="w-4 h-4" />
-                      {editingSlotId ? 'Atualizar horário' : 'Adicionar horário'}
-                    </button>
-                  </div>
-
-                  {editingSlotId && (
-                    <p className="mt-3 text-xs text-muted-foreground">Você está editando um horário existente. Salve para substituir o período atual.</p>
-                  )}
-                </div>
-
-                <div className="rounded-2xl border border-border bg-background p-4">
-                  <div className="flex items-center justify-between gap-3 mb-4">
-                    <div>
-                      <h3 className="text-lg text-foreground">Horários cadastrados</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {currentSchedule.slots.length} intervalo{currentSchedule.slots.length === 1 ? '' : 's'} disponível{currentSchedule.slots.length === 1 ? '' : 'eis'}
-                      </p>
-                    </div>
-                    <Clock3 className="w-5 h-5 text-primary" />
-                  </div>
-
-                  <div className="space-y-3">
-                    {currentSchedule.slots.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">Nenhum horário cadastrado para este veterinário.</p>
-                    ) : (
-                      currentSchedule.slots.map((slot) => (
-                        <div key={slot.id} className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-muted/20 px-4 py-3">
-                          <div>
-                            <p className="text-foreground">{slot.day}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {slot.start} - {slot.end}
-                            </p>
-                          </div>
-                          <div className="flex gap-2">
-                            <button onClick={() => handleEditSlot(slot)} className="inline-flex items-center gap-2 rounded-2xl border border-border bg-background px-3 py-2 text-sm text-foreground">
-                              <Edit3 className="w-4 h-4" />
-                              Editar
-                            </button>
-                            <button onClick={() => handleDeleteSlot(slot.id)} className="inline-flex items-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                              <Trash2 className="w-4 h-4" />
-                              Excluir
-                            </button>
-                          </div>
+                {veterinarianPendingLinks.map((link) => (
+                  <div key={link.id} className="rounded-[24px] border border-border bg-background p-4">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-foreground">{link.veterinarianName}</p>
+                          <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs text-amber-700">Pendente</span>
                         </div>
-                      ))
-                    )}
+                        <p className="mt-1 text-sm text-muted-foreground">{link.veterinarianEmail}</p>
+                        <p className="text-xs text-muted-foreground">CRMV {link.veterinarianCrmv}/{link.veterinarianCrmvUf}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">Convite enviado pela clÃ­nica. O veterinÃ¡rio precisa aceitar.</p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => void handleRemoveLink(link.id)}
+                        disabled={savingLinkId === link.id}
+                        className="inline-flex items-center gap-2 rounded-[18px] border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Cancelar convite
+                      </button>
+                    </div>
                   </div>
+                ))}
+              </div>
+            ) : null}
+
+            {clinicPendingLinks.length > 0 ? (
+              <div className="space-y-3 rounded-[28px] border border-border/70 bg-card p-5 shadow-[0_24px_60px_-36px_rgba(127,162,106,0.18)]">
+                <div>
+                  <p className="text-sm text-muted-foreground">Solicitações aguardando aprovação</p>
+                  <h3 className="text-xl text-foreground">Veterinários esperando retorno da clínica</h3>
                 </div>
+                {clinicPendingLinks.map((link) => (
+                  <div key={link.id} className="rounded-[24px] border border-border bg-background p-4">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-foreground">{link.veterinarianName}</p>
+                          <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs text-amber-700">Pendente</span>
+                        </div>
+                        <p className="mt-1 text-sm text-muted-foreground">{link.veterinarianEmail}</p>
+                        <p className="text-xs text-muted-foreground">CRMV {link.veterinarianCrmv}/{link.veterinarianCrmvUf}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">Solicitação criada pela clínica. Aguardando o veterinário responder.</p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => void handleRemoveLink(link.id)}
+                        disabled={savingLinkId === link.id}
+                        className="inline-flex items-center gap-2 rounded-[18px] border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Cancelar convite
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </section>
+        ) : null}
+
+        {tab === 'active' ? (
+          <section className="space-y-3">
+            {approvedLinks.length === 0 ? (
+              <div className="rounded-[28px] border border-dashed border-border bg-card p-6 text-sm text-muted-foreground">
+                Nenhum veterinÃ¡rio ativo ainda.
               </div>
             ) : (
-              <div className="rounded-2xl border border-dashed border-border bg-muted/20 p-6">
-                <p className="text-sm text-muted-foreground">
-                  Selecione um veterinário ativo para definir especialidade e horários.
-                </p>
-              </div>
+              approvedLinks.map((link) => (
+                <div key={link.id} className="rounded-[28px] border border-border/70 bg-card p-5 shadow-[0_24px_60px_-36px_rgba(127,162,106,0.18)]">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-foreground">{link.veterinarianName}</p>
+                        <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs text-emerald-700">Ativo</span>
+                      </div>
+                      <p className="mt-1 text-sm text-muted-foreground">{link.veterinarianEmail}</p>
+                      <p className="text-xs text-muted-foreground">CRMV {link.veterinarianCrmv}/{link.veterinarianCrmvUf}</p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => void handleRemoveLink(link.id)}
+                      disabled={savingLinkId === link.id}
+                      className="inline-flex items-center gap-2 rounded-[18px] border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Desvincular
+                    </button>
+                  </div>
+                </div>
+              ))
             )}
           </section>
-        </div>
+        ) : null}
       </div>
-    </div>
+    </ClinicShell>
   );
 }
+
+
+

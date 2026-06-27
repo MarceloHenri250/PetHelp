@@ -5,6 +5,7 @@ import { pool } from '../../db/index.js';
 import type { AuthRequest } from '../../middlewares/auth.js';
 import { requireAuth } from '../../middlewares/auth.js';
 import { findClinicByUserId, findTutorByUserId, findVeterinarianByUserId } from '../users/users.service.js';
+import { asTrimmedString, formatDate, getWeekdayKey, isWithinRange, timeToMinutes } from './appointments.utils.js';
 
 type AppointmentRow = RowDataPacket & {
   id: string;
@@ -25,18 +26,23 @@ type AppointmentRow = RowDataPacket & {
   updated_at: Date;
 };
 
+type VetPassRow = RowDataPacket & {
+  id: string;
+  pass_code: string;
+  tutor_id: string;
+  pet_id: string;
+  pet_name: string;
+  documents: string;
+  redeemed_by_user_id: string | null;
+  created_at: Date;
+  expires_at: Date | string;
+  redeemed_at: Date | string | null;
+  updated_at: Date;
+};
+
 type DbClient = Pick<PoolConnection, 'execute' | 'query'>;
 
 const router = Router();
-
-function asTrimmedString(value: unknown) {
-  return typeof value === 'string' ? value.trim() : '';
-}
-
-function formatDate(value: Date | string) {
-  if (typeof value === 'string') return value.slice(0, 10);
-  return value.toISOString().slice(0, 10);
-}
 
 async function loadPetById(db: DbClient, petId: string) {
   const [rows] = await db.query<RowDataPacket[]>(
@@ -116,6 +122,131 @@ async function loadAppointmentById(db: DbClient, id: string) {
   );
 
   return rows[0] ?? null;
+}
+
+async function loadVetPassByCode(db: DbClient, code: string) {
+  const [rows] = await db.query<VetPassRow[]>(
+    `
+      SELECT
+        id,
+        pass_code,
+        tutor_id,
+        pet_id,
+        pet_name,
+        documents,
+        redeemed_by_user_id,
+        created_at,
+        expires_at,
+        redeemed_at,
+        updated_at
+      FROM vet_passes
+      WHERE pass_code = ?
+      LIMIT 1
+    `,
+    [code]
+  );
+
+  return rows[0] ?? null;
+}
+
+async function loadClinicWorkingHours(db: DbClient, clinicId: string) {
+  const [rows] = await db.query<RowDataPacket[]>(
+    'SELECT working_hours FROM clinics WHERE id = ? LIMIT 1',
+    [clinicId]
+  );
+
+  const row = rows[0] as { working_hours?: string | null } | undefined;
+  if (!row?.working_hours) return null;
+
+  try {
+    const parsed = JSON.parse(row.working_hours);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return null;
+    }
+    return parsed as Record<string, { open?: string; close?: string } | undefined>;
+  } catch {
+    return null;
+  }
+}
+
+async function isVeterinarianLinkedToClinic(db: DbClient, clinicId: string, veterinarianId: string) {
+  const [rows] = await db.query<RowDataPacket[]>(
+    `
+      SELECT id
+      FROM clinic_veterinarians
+      WHERE clinic_id = ?
+        AND veterinarian_id = ?
+        AND status = 'approved'
+      LIMIT 1
+    `,
+    [clinicId, veterinarianId]
+  );
+
+  return rows.length > 0;
+}
+
+async function resolveAvailability(
+  db: DbClient,
+  input: {
+    date: string;
+    time: string;
+    clinicId?: string | null;
+    veterinarianId?: string | null;
+  }
+) {
+  const issues: string[] = [];
+  const weekday = getWeekdayKey(input.date);
+  let workingHours: Record<string, { open?: string; close?: string } | undefined> | null = null;
+
+  if (input.clinicId) {
+    workingHours = await loadClinicWorkingHours(db, input.clinicId);
+    if (!workingHours) {
+      issues.push('A clínica selecionada não possui horário de funcionamento configurado.');
+    } else if (weekday) {
+      const hours = workingHours[weekday];
+      if (!hours?.open || !hours?.close) {
+        issues.push('A clínica selecionada não atende neste dia.');
+      } else if (!isWithinRange(input.time, hours.open, hours.close)) {
+        issues.push('O horário escolhido está fora do funcionamento da clínica.');
+      }
+    }
+  }
+
+  if (input.clinicId && input.veterinarianId) {
+    const linked = await isVeterinarianLinkedToClinic(db, input.clinicId, input.veterinarianId);
+    if (!linked) {
+      issues.push('O veterinário selecionado não está vinculado à clínica escolhida.');
+    }
+  }
+
+  const appointmentClauses: string[] = ['appointment_date = ?', "status = 'scheduled'"];
+  const appointmentValues: Array<string> = [input.date];
+
+  if (input.clinicId && input.veterinarianId) {
+    appointmentClauses.push('(clinic_id = ? OR veterinarian_id = ?)');
+    appointmentValues.push(input.clinicId, input.veterinarianId);
+  } else if (input.clinicId) {
+    appointmentClauses.push('clinic_id = ?');
+    appointmentValues.push(input.clinicId);
+  } else if (input.veterinarianId) {
+    appointmentClauses.push('veterinarian_id = ?');
+    appointmentValues.push(input.veterinarianId);
+  }
+
+  const [rows] = await db.query<AppointmentRow[]>(
+    `SELECT appointment_time FROM appointments WHERE ${appointmentClauses.join(' AND ')}`,
+    appointmentValues
+  );
+
+  const busyTimes = rows.map((row) => row.appointment_time);
+  const isBusy = busyTimes.includes(input.time);
+
+  return {
+    isAvailable: issues.length === 0 && !isBusy,
+    busyTimes,
+    workingHours,
+    issues,
+  };
 }
 
 async function canAccessPet(user: AuthRequest['user'], petId: string) {
@@ -210,6 +341,43 @@ router.get('/pet/:petId', async (req: AuthRequest, res, next) => {
   }
 });
 
+router.get('/availability', async (req: AuthRequest, res, next) => {
+  try {
+    const date = asTrimmedString(req.query.date);
+    const time = asTrimmedString(req.query.time);
+    const clinicId = asTrimmedString(req.query.clinicId);
+    const veterinarianId = asTrimmedString(req.query.veterinarianId);
+
+    if (!date || !time) {
+      res.status(400).json({ message: 'date and time are required' });
+      return;
+    }
+
+    if (!clinicId && !veterinarianId) {
+      res.status(400).json({ message: 'clinicId or veterinarianId is required' });
+      return;
+    }
+
+    const availability = await resolveAvailability(pool, {
+      date,
+      time,
+      clinicId: clinicId || null,
+      veterinarianId: veterinarianId || null,
+    });
+
+    res.json({
+      data: {
+        isAvailable: availability.isAvailable,
+        busyTimes: availability.busyTimes,
+        workingHours: availability.workingHours,
+        issues: availability.issues,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.post('/', async (req: AuthRequest, res, next) => {
   const connection = await pool.getConnection();
 
@@ -222,6 +390,7 @@ router.post('/', async (req: AuthRequest, res, next) => {
     const targetType = asTrimmedString(body.targetType).toLowerCase();
     const clinicIdInput = asTrimmedString(body.clinicId);
     const veterinarianIdInput = asTrimmedString(body.veterinarianId);
+    const vetPassCode = asTrimmedString(body.vetPassCode).toUpperCase();
     const clinicName = asTrimmedString(body.clinicName) || null;
     const veterinarianName = asTrimmedString(body.veterinarianName) || null;
     const veterinarianEmail = asTrimmedString(body.veterinarianEmail) || null;
@@ -245,6 +414,11 @@ router.post('/', async (req: AuthRequest, res, next) => {
       return;
     }
 
+    if (!vetPassCode) {
+      res.status(400).json({ message: 'vetPassCode is required' });
+      return;
+    }
+
     const access = await canAccessPet(req.user, petId);
     if (!access.allowed) {
       res.status(access.status ?? 403).json({ message: access.message });
@@ -252,7 +426,6 @@ router.post('/', async (req: AuthRequest, res, next) => {
     }
 
     const tutorId = await resolveCurrentTutorId(req.user);
-    const clinicId = await resolveCurrentClinicId(req.user);
     const explicitTutorId = asTrimmedString(body.tutorId);
     const nextTutorId = tutorId ?? (explicitTutorId || access.pet?.current_tutor_id || null);
 
@@ -261,8 +434,24 @@ router.post('/', async (req: AuthRequest, res, next) => {
       return;
     }
 
-    const nextClinicId = resolvedTargetType === 'veterinarian' ? null : (clinicId ?? clinicIdInput ?? null);
-    const nextVeterinarianId = resolvedTargetType === 'clinic' ? null : (veterinarianIdInput || null);
+    const vetPass = await loadVetPassByCode(connection, vetPassCode);
+    if (!vetPass) {
+      res.status(404).json({ message: 'Vet-Pass not found' });
+      return;
+    }
+
+    if (vetPass.tutor_id !== nextTutorId || vetPass.pet_id !== petId) {
+      res.status(403).json({ message: 'Vet-Pass does not match the selected pet' });
+      return;
+    }
+
+    if (new Date(vetPass.expires_at).getTime() < Date.now()) {
+      res.status(410).json({ message: 'Vet-Pass expired' });
+      return;
+    }
+
+    const nextClinicId = clinicIdInput || null;
+    const nextVeterinarianId = veterinarianIdInput || null;
 
     if (resolvedTargetType === 'clinic' && !nextClinicId) {
       res.status(400).json({ message: 'clinicId is required for clinic appointments' });
@@ -272,6 +461,30 @@ router.post('/', async (req: AuthRequest, res, next) => {
     if (resolvedTargetType === 'veterinarian' && !nextVeterinarianId) {
       res.status(400).json({ message: 'veterinarianId is required for veterinarian appointments' });
       return;
+    }
+
+    const availability = await resolveAvailability(connection, {
+      date,
+      time,
+      clinicId: nextClinicId,
+      veterinarianId: nextVeterinarianId,
+    });
+
+    if (!availability.isAvailable) {
+      res.status(409).json({
+        message: availability.issues[0] ?? 'Selected time is not available',
+        issues: availability.issues,
+        busyTimes: availability.busyTimes,
+      });
+      return;
+    }
+
+    if (nextClinicId && nextVeterinarianId) {
+      const linked = await isVeterinarianLinkedToClinic(connection, nextClinicId, nextVeterinarianId);
+      if (!linked) {
+        res.status(409).json({ message: 'Veterinarian is not linked to the selected clinic' });
+        return;
+      }
     }
 
     await connection.beginTransaction();
@@ -303,10 +516,10 @@ router.post('/', async (req: AuthRequest, res, next) => {
         nextTutorId,
         nextVeterinarianId,
         nextClinicId,
-        resolvedTargetType === 'veterinarian' ? null : clinicName,
-        resolvedTargetType === 'clinic' ? null : veterinarianName,
-        resolvedTargetType === 'clinic' ? null : veterinarianEmail,
-        resolvedTargetType === 'clinic' ? null : veterinarianPhone,
+        nextClinicId ? clinicName : null,
+        nextVeterinarianId ? veterinarianName : null,
+        nextVeterinarianId ? veterinarianEmail : null,
+        nextVeterinarianId ? veterinarianPhone : null,
         date,
         time,
         reason,

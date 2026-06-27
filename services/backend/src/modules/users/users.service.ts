@@ -553,29 +553,47 @@ export async function listClinicProfiles(query?: string) {
   return profiles.filter((profile): profile is PublicUserRecord => profile !== null && profile.user_type === 'clinic');
 }
 
-export async function listVeterinarianProfiles(query?: string, specialty?: string) {
+export async function listVeterinarianProfiles(query?: string, specialty?: string, clinicId?: string) {
   const search = query?.trim().toLowerCase() ?? '';
   const specialtySearch = specialty?.trim().toLowerCase() ?? '';
+  const clinicFilter = clinicId?.trim() ?? '';
+  const whereParts = [
+    `u.user_type = 'veterinarian'`,
+    `(
+      ? = ''
+      OR LOWER(v.name) LIKE ?
+      OR LOWER(COALESCE(v.crmv, '')) LIKE ?
+      OR LOWER(COALESCE(v.specialty, '')) LIKE ?
+    )`,
+    `(? = '' OR LOWER(COALESCE(v.specialty, '')) LIKE ?)`,
+  ];
+  const values: Array<string> = [search, `%${search}%`, `%${search}%`, `%${search}%`, specialtySearch, `%${specialtySearch}%`];
+
+  if (clinicFilter) {
+    whereParts.push(`EXISTS (
+      SELECT 1
+      FROM clinic_veterinarians cv
+      WHERE cv.veterinarian_id = v.id
+        AND cv.clinic_id = ?
+        AND cv.status = 'approved'
+    )`);
+    values.push(clinicFilter);
+  }
+
   const [rows] = await pool.query<RowDataPacket[]>(
     `
-      SELECT u.id
+      SELECT DISTINCT u.id
       FROM users u
       INNER JOIN veterinarians v ON v.user_id = u.id
-      WHERE u.user_type = 'veterinarian'
-        AND (
-          ? = ''
-          OR LOWER(v.name) LIKE ?
-          OR LOWER(COALESCE(v.crmv, '')) LIKE ?
-          OR LOWER(COALESCE(v.specialty, '')) LIKE ?
-        )
-        AND (? = '' OR LOWER(COALESCE(v.specialty, '')) LIKE ?)
+      WHERE ${whereParts.join(' AND ')}
       ORDER BY v.name ASC
       LIMIT 50
     `,
-    [search, `%${search}%`, `%${search}%`, `%${search}%`, specialtySearch, `%${specialtySearch}%`]
+    values
   );
 
   const profiles = await Promise.all(rows.map((row) => getUserProfileById(String(row.id))));
   return profiles.filter((profile): profile is PublicUserRecord => profile !== null && profile.user_type === 'veterinarian');
 }
+
 

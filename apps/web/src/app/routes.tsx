@@ -6,6 +6,8 @@ import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
 import OwnerDashboardScreen from './screens/OwnerDashboardScreen';
 import ClinicDashboardScreen from './screens/ClinicDashboardScreen';
+import ClinicAgendaScreen from './screens/ClinicAgendaScreen';
+import ClinicHistoryScreen from './screens/ClinicHistoryScreen';
 import VeterinarianDashboardScreen from './screens/VeterinarianDashboardScreen';
 import VeterinarianScheduleScreen from './screens/VeterinarianScheduleScreen';
 import PetRegistrationScreen from './screens/PetRegistrationScreen';
@@ -21,6 +23,7 @@ import OwnerProfileScreen from './screens/OwnerProfileScreen';
 import ClinicSettingsScreen from './screens/ClinicSettingsScreen';
 import ManageVeterinariansScreen from './screens/ManageVeterinariansScreen';
 import VeterinarianSettingsScreen from './screens/VeterinarianSettingsScreen';
+import VeterinarianLinksScreen from './screens/VeterinarianLinksScreen';
 
 function PublicOnly({ children }: { children: ReactNode }) {
   const { authReady, isAuthenticated, user } = useSession();
@@ -131,6 +134,14 @@ export const router = createBrowserRouter([
     Component: withAllowedUserTypes(ClinicDashboardScreen, ['clinic']),
   },
   {
+    path: '/clinic-agenda',
+    Component: withAllowedUserTypes(ClinicAgendaScreen, ['clinic']),
+  },
+  {
+    path: '/clinic-history',
+    Component: withAllowedUserTypes(ClinicHistoryScreen, ['clinic']),
+  },
+  {
     path: '/veterinarian-dashboard',
     Component: withAllowedUserTypes(VeterinarianDashboardScreen, ['veterinarian']),
   },  {
@@ -151,6 +162,10 @@ export const router = createBrowserRouter([
     Component: withAllowedUserTypes(MedicalHistoryScreen, ['owner', 'veterinarian']),
   },
   {
+    path: '/veterinarian-history',
+    Component: withAllowedUserTypes(MedicalHistoryScreen, ['veterinarian']),
+  },
+  {
     path: '/vaccines',
     Component: withAllowedUserTypes(VaccinationScreen, ['owner', 'veterinarian']),
   },
@@ -165,6 +180,14 @@ export const router = createBrowserRouter([
   {
     path: '/notifications',
     Component: withProtectedOnly(NotificationsScreen),
+  },
+  {
+    path: '/clinic-notifications',
+    Component: withAllowedUserTypes(NotificationsScreen, ['clinic']),
+  },
+  {
+    path: '/veterinarian-notifications',
+    Component: withAllowedUserTypes(NotificationsScreen, ['veterinarian']),
   },
   {
     path: '/connection',
@@ -185,6 +208,10 @@ export const router = createBrowserRouter([
   {
     path: '/veterinarian-settings',
     Component: withAllowedUserTypes(VeterinarianSettingsScreen, ['veterinarian']),
+  },
+  {
+    path: '/veterinarian-links',
+    Component: withAllowedUserTypes(VeterinarianLinksScreen, ['veterinarian']),
   },
   {
     path: '/profile',

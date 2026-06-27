@@ -1,4 +1,4 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import type { RowDataPacket } from 'mysql2';
 import { pool } from '../../db/index.js';
 import type { AuthRequest } from '../../middlewares/auth.js';
@@ -366,7 +366,8 @@ router.post('/:id/accept', async (req, res, next) => {
 router.delete('/:id', async (req: AuthRequest, res, next) => {
   try {
     const veterinarianId = await getCurrentVeterinarianId(req.user);
-    if (!veterinarianId) {
+    const clinicId = await getCurrentClinicId(req.user);
+    if (!veterinarianId && !clinicId) {
       res.status(403).json({ message: 'Forbidden' });
       return;
     }
@@ -383,7 +384,12 @@ router.delete('/:id', async (req: AuthRequest, res, next) => {
       return;
     }
 
-    if (link.veterinarian_id !== veterinarianId) {
+    if (veterinarianId && link.veterinarian_id !== veterinarianId) {
+      res.status(403).json({ message: 'Forbidden' });
+      return;
+    }
+
+    if (clinicId && link.clinic_id !== clinicId) {
       res.status(403).json({ message: 'Forbidden' });
       return;
     }
@@ -396,3 +402,4 @@ router.delete('/:id', async (req: AuthRequest, res, next) => {
 });
 
 export default router;
+

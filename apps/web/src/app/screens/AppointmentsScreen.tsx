@@ -1,12 +1,11 @@
 ﻿import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { ArrowLeft, Calendar, Clock, Mail, MapPin, MessageSquare, PenLine, Plus, Star, Trash2, X } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, Lock, Mail, MessageSquare, PenLine, Plus, Star, Trash2, X } from 'lucide-react';
 import { useInteraction } from '../context/InteractionContext';
 import { usePets } from '../context/PetsContext';
 import { useReviews } from '../context/ReviewsContext';
 import { useSession } from '../context/SessionContext';
 import { getApiBase, getAuthHeaders, type Appointment } from '../context/shared';
-import { useAppNavigation } from '../navigation';
 import { TutorShell } from '../components/layout/TutorShell';
 import SearchablePicker, { type SearchablePickerItem } from '../components/forms/SearchablePicker';
 
@@ -21,7 +20,63 @@ type CatalogEntry = SearchablePickerItem & {
   crmvUf?: string | null;
   veterinarianEmail?: string | null;
   veterinarianPhone?: string | null;
+  workingHours?: Record<string, unknown> | null;
 };
+
+type AvailabilityState = {
+  loading: boolean;
+  isAvailable: boolean | null;
+  message: string;
+  busyTimes: string[];
+};
+
+const initialAvailability: AvailabilityState = {
+  loading: false,
+  isAvailable: null,
+  message: 'Selecione clínica, veterinário, data e horário para verificar disponibilidade.',
+  busyTimes: [],
+};
+
+function mapCatalogEntry(entry: any, type: 'clinic' | 'veterinarian'): CatalogEntry {
+  return {
+    id: String(entry.id),
+    type,
+    name: entry.name,
+    label: type === 'veterinarian' ? `${entry.name}${entry.specialty ? ` • ${entry.specialty}` : ''}` : entry.name,
+    description:
+      type === 'veterinarian'
+        ? `${entry.crmv ? `CRMV ${entry.crmv}${entry.crmvUf ? `/${entry.crmvUf}` : ''}` : 'Veterinário cadastrado'}`
+        : `${entry.connectionCode ? `Código ${entry.connectionCode}` : entry.address || 'Clínica cadastrada'}`,
+    clinicName: entry.clinicName,
+    connectionCode: entry.connectionCode,
+    address: entry.address,
+    specialty: entry.specialty,
+    crmv: entry.crmv,
+    crmvUf: entry.crmvUf,
+    veterinarianEmail: entry.veterinarianEmail,
+    veterinarianPhone: entry.veterinarianPhone,
+    workingHours: entry.workingHours,
+  };
+}
+
+const weekdayOrder = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
+
+function formatWorkingHours(hours?: Record<string, unknown> | null) {
+  if (!hours) return 'Horário não informado';
+
+  const entries = weekdayOrder
+    .map((day) => {
+      const slot = hours[day];
+      if (!slot || typeof slot !== 'object') return null;
+      const open = typeof (slot as { open?: unknown }).open === 'string' ? (slot as { open?: string }).open : '';
+      const close = typeof (slot as { close?: unknown }).close === 'string' ? (slot as { close?: string }).close : '';
+      if (!open || !close) return null;
+      return `${day.slice(0, 3)} ${open} - ${close}`;
+    })
+    .filter((entry): entry is string => Boolean(entry));
+
+  return entries.length > 0 ? entries.join(' • ') : 'Horário não informado';
+}
 
 export default function AppointmentsScreen() {
   const navigate = useNavigate();
@@ -29,42 +84,92 @@ export default function AppointmentsScreen() {
   const { currentPet } = usePets();
   const { appointments, addAppointment } = useInteraction();
   const { getReviewForAppointment, upsertReview, deleteReview } = useReviews();
-  const { goToDashboard } = useAppNavigation();
   const API_BASE = getApiBase();
 
   const [showNewAppointment, setShowNewAppointment] = useState(false);
   const [targetType, setTargetType] = useState<'clinic' | 'veterinarian'>('clinic');
   const [catalogQuery, setCatalogQuery] = useState('');
   const [specialtyFilter, setSpecialtyFilter] = useState('');
+  const [clinicItems, setClinicItems] = useState<CatalogEntry[]>([]);
   const [catalogItems, setCatalogItems] = useState<CatalogEntry[]>([]);
+  const [selectedClinicId, setSelectedClinicId] = useState('');
   const [selectedCatalogId, setSelectedCatalogId] = useState('');
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
   const [reason, setReason] = useState('');
+  const [vetPassCode, setVetPassCode] = useState('');
+  const [loadingClinics, setLoadingClinics] = useState(false);
   const [loadingCatalog, setLoadingCatalog] = useState(false);
+  const [availability, setAvailability] = useState<AvailabilityState>(initialAvailability);
   const [reviewAppointmentId, setReviewAppointmentId] = useState<string | null>(null);
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState('');
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  const userAppointments = useMemo(() => (user?.userType === 'owner' ? appointments.filter((a) => a.ownerId === user.id) : appointments), [appointments, user?.id, user?.userType]);
+  const userAppointments = useMemo(
+    () => (user?.userType === 'owner' ? appointments.filter((a) => a.ownerId === user.id) : appointments),
+    [appointments, user?.id, user?.userType]
+  );
   const scheduled = userAppointments.filter((a) => a.status === 'scheduled');
   const completed = userAppointments.filter((a) => a.status === 'completed');
   const activeReviewAppointment = reviewAppointmentId ? userAppointments.find((appointment) => appointment.id === reviewAppointmentId) ?? null : null;
   const activeReview = activeReviewAppointment ? getReviewForAppointment(activeReviewAppointment.id) : null;
+  const selectedClinicItem = clinicItems.find((item) => item.id === selectedClinicId) ?? null;
   const selectedCatalogItem = catalogItems.find((item) => item.id === selectedCatalogId) ?? null;
 
   useEffect(() => {
     if (!showNewAppointment) return;
 
     const controller = new AbortController();
+    setLoadingClinics(true);
+
+    void fetch(`${API_BASE}/api/users/catalog?type=clinic`, {
+      headers: getAuthHeaders(),
+      signal: controller.signal,
+    })
+      .then(async (resp) => {
+        if (!resp.ok) {
+          setClinicItems([]);
+          return;
+        }
+
+        const { data } = await resp.json();
+        setClinicItems((data ?? []).map((entry: any) => mapCatalogEntry(entry, 'clinic')));
+      })
+      .catch((error) => {
+        if (!(error instanceof DOMException && error.name === 'AbortError')) {
+          console.error('Falha ao carregar clínicas:', error);
+          setClinicItems([]);
+        }
+      })
+      .finally(() => setLoadingClinics(false));
+
+    return () => controller.abort();
+  }, [API_BASE, showNewAppointment]);
+
+  useEffect(() => {
+    if (!showNewAppointment) {
+      setAvailability(initialAvailability);
+    }
+  }, [showNewAppointment]);
+
+  useEffect(() => {
+    if (!showNewAppointment) return;
+
+    if (targetType === 'clinic' && !selectedClinicId) {
+      setCatalogItems([]);
+      return;
+    }
+
+    const controller = new AbortController();
     const loadCatalog = async () => {
       setLoadingCatalog(true);
       try {
         const params = new URLSearchParams();
-        params.set('type', targetType);
+        params.set('type', 'veterinarian');
         if (catalogQuery.trim()) params.set('query', catalogQuery.trim());
-        if (targetType === 'veterinarian' && specialtyFilter.trim()) params.set('specialty', specialtyFilter.trim());
+        if (specialtyFilter.trim()) params.set('specialty', specialtyFilter.trim());
+        if (selectedClinicId.trim()) params.set('clinicId', selectedClinicId.trim());
 
         const resp = await fetch(`${API_BASE}/api/users/catalog?${params.toString()}`, {
           headers: getAuthHeaders(),
@@ -77,26 +182,7 @@ export default function AppointmentsScreen() {
         }
 
         const { data } = await resp.json();
-        const items = (data ?? []).map((entry: any) => ({
-          id: String(entry.id),
-          type: entry.type === 'veterinarian' ? 'veterinarian' : 'clinic',
-          name: entry.name,
-          label: entry.type === 'veterinarian'
-            ? `${entry.name}${entry.specialty ? ` • ${entry.specialty}` : ''}`
-            : `${entry.name}${entry.address ? ` • ${entry.address}` : ''}`,
-          description: entry.type === 'veterinarian'
-            ? `${entry.crmv ? `CRMV ${entry.crmv}${entry.crmvUf ? `/${entry.crmvUf}` : ''}` : 'Veterinário cadastrado'}`
-            : `${entry.connectionCode ? `Código ${entry.connectionCode}` : 'Clínica cadastrada'}`,
-          clinicName: entry.clinicName,
-          connectionCode: entry.connectionCode,
-          address: entry.address,
-          specialty: entry.specialty,
-          crmv: entry.crmv,
-          crmvUf: entry.crmvUf,
-          veterinarianEmail: entry.veterinarianEmail,
-          veterinarianPhone: entry.veterinarianPhone,
-        })) as CatalogEntry[];
-
+        const items = (data ?? []).map((entry: any) => mapCatalogEntry(entry, 'veterinarian')) as CatalogEntry[];
         setCatalogItems(items);
         setSelectedCatalogId((current) => (items.some((item) => item.id === current) ? current : ''));
       } catch (error) {
@@ -112,7 +198,95 @@ export default function AppointmentsScreen() {
     void loadCatalog();
 
     return () => controller.abort();
-  }, [API_BASE, catalogQuery, showNewAppointment, specialtyFilter, targetType]);
+  }, [API_BASE, catalogQuery, selectedClinicId, showNewAppointment, specialtyFilter, targetType]);
+
+  useEffect(() => {
+    if (!showNewAppointment) {
+      setAvailability(initialAvailability);
+      return;
+    }
+
+    const needsClinic = targetType === 'clinic';
+    const hasClinic = Boolean(selectedClinicId);
+    const hasVeterinarian = Boolean(selectedCatalogId);
+
+    if (!date || !time || !hasVeterinarian || (needsClinic && !hasClinic)) {
+      setAvailability({
+        loading: false,
+        isAvailable: null,
+        message: needsClinic
+          ? !hasClinic
+            ? 'Selecione a clínica para carregar os veterinários disponíveis.'
+            : 'Selecione um veterinário da clínica para verificar disponibilidade.'
+          : 'Selecione um veterinário, data e horário para verificar disponibilidade.',
+        busyTimes: [],
+      });
+      return;
+    }
+
+    const controller = new AbortController();
+    const loadAvailability = async () => {
+      setAvailability((current) => ({
+        ...current,
+        loading: true,
+        message: 'Verificando disponibilidade...',
+      }));
+
+      try {
+        const params = new URLSearchParams({
+          date,
+          time,
+        });
+
+        if (hasClinic) {
+          params.set('clinicId', selectedClinicId);
+        }
+
+        if (hasVeterinarian) {
+          params.set('veterinarianId', selectedCatalogId);
+        }
+
+        const resp = await fetch(`${API_BASE}/api/appointments/availability?${params.toString()}`, {
+          headers: getAuthHeaders(),
+          signal: controller.signal,
+        });
+
+        if (!resp.ok) {
+          const payload = await resp.json().catch(() => null);
+          setAvailability({
+            loading: false,
+            isAvailable: false,
+            message: payload?.message ?? 'Não foi possível verificar a disponibilidade.',
+            busyTimes: [],
+          });
+          return;
+        }
+
+        const { data } = await resp.json();
+        const issues = Array.isArray(data?.issues) ? data.issues.filter((item: unknown): item is string => typeof item === 'string') : [];
+        setAvailability({
+          loading: false,
+          isAvailable: Boolean(data?.isAvailable),
+          message: data?.isAvailable ? 'Horário disponível para agendamento.' : issues[0] ?? 'Horário indisponível.',
+          busyTimes: Array.isArray(data?.busyTimes) ? data.busyTimes.filter((item: unknown): item is string => typeof item === 'string') : [],
+        });
+      } catch (error) {
+        if (!(error instanceof DOMException && error.name === 'AbortError')) {
+          console.error('Falha ao verificar disponibilidade:', error);
+          setAvailability({
+            loading: false,
+            isAvailable: false,
+            message: 'Não foi possível verificar a disponibilidade.',
+            busyTimes: [],
+          });
+        }
+      }
+    };
+
+    void loadAvailability();
+
+    return () => controller.abort();
+  }, [API_BASE, date, selectedCatalogId, selectedClinicId, showNewAppointment, targetType, time]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -123,8 +297,16 @@ export default function AppointmentsScreen() {
       return;
     }
 
+    if (targetType === 'clinic' && !selectedClinicItem) {
+      setFeedback({ type: 'error', message: 'Selecione uma clínica para continuar.' });
+      return;
+    }
+
     if (!selectedCatalogItem) {
-      setFeedback({ type: 'error', message: `Selecione uma ${targetType === 'clinic' ? 'clínica' : 'especialidade/profissional'} existente.` });
+      setFeedback({
+        type: 'error',
+        message: targetType === 'clinic' ? 'Selecione um veterinário disponível da clínica.' : 'Selecione um veterinário.',
+      });
       return;
     }
 
@@ -133,15 +315,32 @@ export default function AppointmentsScreen() {
       return;
     }
 
+    const vetPass = vetPassCode.trim().toUpperCase();
+    if (!vetPass) {
+      setFeedback({ type: 'error', message: 'Informe o código VetPass do pet.' });
+      return;
+    }
+
+    if (availability.loading) {
+      setFeedback({ type: 'error', message: 'Aguarde a verificação de disponibilidade.' });
+      return;
+    }
+
+    if (availability.isAvailable !== true) {
+      setFeedback({ type: 'error', message: availability.message || 'Escolha um horário disponível.' });
+      return;
+    }
+
     const appointmentPayload: Omit<Appointment, 'id'> = {
       petId: currentPet.id,
       petName: currentPet.name,
-      clinicId: targetType === 'clinic' ? selectedCatalogItem.id : null,
-      clinicName: targetType === 'clinic' ? selectedCatalogItem.name : null,
-      veterinarianId: targetType === 'veterinarian' ? selectedCatalogItem.id : null,
-      veterinarianName: targetType === 'veterinarian' ? selectedCatalogItem.name : null,
-      veterinarianEmail: targetType === 'veterinarian' ? selectedCatalogItem.veterinarianEmail ?? null : null,
-      veterinarianPhone: targetType === 'veterinarian' ? selectedCatalogItem.veterinarianPhone ?? null : null,
+      clinicId: selectedClinicItem?.id ?? null,
+      clinicName: selectedClinicItem?.name ?? null,
+      veterinarianId: selectedCatalogItem.id,
+      veterinarianName: selectedCatalogItem.name,
+      veterinarianEmail: selectedCatalogItem.veterinarianEmail ?? null,
+      veterinarianPhone: selectedCatalogItem.veterinarianPhone ?? null,
+      vetPassCode: vetPass,
       targetType,
       date,
       time,
@@ -154,12 +353,16 @@ export default function AppointmentsScreen() {
       await addAppointment(appointmentPayload);
       setFeedback({ type: 'success', message: 'Consulta agendada com sucesso.' });
       setShowNewAppointment(false);
+      setTargetType('clinic');
+      setSelectedClinicId('');
+      setSelectedCatalogId('');
       setDate('');
       setTime('');
       setReason('');
+      setVetPassCode('');
       setCatalogQuery('');
       setSpecialtyFilter('');
-      setSelectedCatalogId('');
+      setAvailability(initialAvailability);
     } catch (error) {
       console.error('Falha ao agendar consulta:', error);
       setFeedback({ type: 'error', message: 'Não foi possível agendar a consulta.' });
@@ -205,7 +408,13 @@ export default function AppointmentsScreen() {
     closeReview();
   };
 
-  const catalogCaption = targetType === 'clinic' ? 'Busque clínicas já cadastradas' : 'Busque veterinários e filtre por especialidade';
+  const clinicDescription = loadingClinics ? 'Carregando clínicas...' : 'Escolha a clínica quando quiser filtrar os veterinários.';
+  const providerDescription =
+    targetType === 'clinic'
+      ? 'Busque clínicas já cadastradas.'
+      : selectedClinicId
+        ? 'Busque veterinários vinculados à clínica selecionada.'
+        : 'Selecione uma clínica para carregar os veterinários vinculados.';
 
   return (
     <TutorShell
@@ -232,26 +441,109 @@ export default function AppointmentsScreen() {
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <label className="mb-2 block text-foreground">Destino do agendamento</label>
-                  <select value={targetType} onChange={(event) => { setTargetType(event.target.value as 'clinic' | 'veterinarian'); setSelectedCatalogId(''); setCatalogQuery(''); }} className="w-full rounded-[18px] border border-border bg-[#efe9de] px-4 py-3 text-foreground outline-none focus:border-primary">
+                  <select
+                    value={targetType}
+                    onChange={(event) => {
+                      const nextType = event.target.value as 'clinic' | 'veterinarian';
+                      setTargetType(nextType);
+                      setSelectedClinicId('');
+                      setSelectedCatalogId('');
+                      setAvailability(initialAvailability);
+                    }}
+                    className="w-full rounded-[18px] border border-border bg-[#efe9de] px-4 py-3 text-foreground outline-none focus:border-primary"
+                  >
                     <option value="clinic">Clínica</option>
                     <option value="veterinarian">Veterinário</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-foreground">Especialidade</label>
-                  <input value={specialtyFilter} onChange={(event) => setSpecialtyFilter(event.target.value)} disabled={targetType === 'clinic'} className="w-full rounded-[18px] border border-border bg-[#efe9de] px-4 py-3 text-foreground outline-none transition-colors focus:border-primary disabled:cursor-not-allowed disabled:opacity-60" placeholder="Dermatologia, ortopedia, felinos" />
+                  <label className="mb-2 block text-foreground">Código VetPass</label>
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                      value={vetPassCode}
+                      onChange={(event) => setVetPassCode(event.target.value.toUpperCase())}
+                      placeholder="VET-..."
+                      className="w-full rounded-[18px] border border-border bg-[#efe9de] py-3 pl-12 pr-4 uppercase tracking-wider text-foreground outline-none transition-colors focus:border-primary"
+                    />
+                  </div>
                 </div>
               </div>
 
-              <SearchablePicker key={`${targetType}-${specialtyFilter}`}
-                label={targetType === 'clinic' ? 'Clínica' : 'Veterinário'}
-                placeholder={targetType === 'clinic' ? 'Digite o nome da clínica' : 'Digite o nome do veterinário'}
-                items={catalogItems}
-                selectedId={selectedCatalogId}
-                onSelect={(item) => setSelectedCatalogId(item?.id ?? '')}
-                emptyText={loadingCatalog ? 'Carregando opções...' : catalogCaption}
-              />
+              {targetType === 'clinic' ? (
+                <div className="space-y-4 rounded-[28px] border border-border/70 bg-muted/20 p-4">
+                  <div>
+                    <label className="mb-2 block text-foreground">Clínica</label>
+                    <SearchablePicker
+                      key={`clinic-${catalogQuery}`}
+                      label="Clínica"
+                      placeholder="Buscar clínica"
+                      items={clinicItems}
+                      selectedId={selectedClinicId}
+                      onSelect={(item) => {
+                        setSelectedClinicId(item?.id ?? '');
+                        setSelectedCatalogId('');
+                      }}
+                      emptyText={clinicDescription}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-foreground">Veterinário disponível</label>
+                    {selectedClinicId ? (
+                      <SearchablePicker
+                        key={`vet-clinic-${selectedClinicId}-${specialtyFilter}`}
+                        label="Veterinário"
+                        placeholder="Buscar veterinário"
+                        items={catalogItems}
+                        selectedId={selectedCatalogId}
+                        onSelect={(item) => setSelectedCatalogId(item?.id ?? '')}
+                        emptyText={loadingCatalog ? 'Carregando veterinários...' : providerDescription}
+                      />
+                    ) : (
+                      <div className="rounded-[22px] border border-dashed border-border bg-background px-4 py-4 text-sm text-muted-foreground">
+                        Selecione a clínica para listar os veterinários vinculados.
+                      </div>
+                    )}
+                  </div>
+
+                  {selectedClinicItem ? (
+                    <div className="rounded-[22px] border border-border bg-background px-4 py-4">
+                      <p className="text-sm text-foreground">Agenda da clínica</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{formatWorkingHours(selectedClinicItem.workingHours)}</p>
+                    </div>
+                  ) : null}
+                </div>
+              ) : (
+                <div className="space-y-4 rounded-[28px] border border-border/70 bg-muted/20 p-4">
+                  <div>
+                    <label className="mb-2 block text-foreground">Veterinário</label>
+                    <SearchablePicker
+                      key={`vet-all-${specialtyFilter}`}
+                      label="Veterinário"
+                      placeholder="Buscar veterinário"
+                      items={catalogItems}
+                      selectedId={selectedCatalogId}
+                      onSelect={(item) => setSelectedCatalogId(item?.id ?? '')}
+                      emptyText={loadingCatalog ? 'Carregando veterinários...' : providerDescription}
+                    />
+                  </div>
+
+                  {selectedCatalogItem ? (
+                    <div className="rounded-[22px] border border-border bg-background px-4 py-4">
+                      <p className="text-sm text-foreground">Veterinário selecionado</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {selectedCatalogItem.description || 'Disponível para agendamento direto'}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="rounded-[22px] border border-dashed border-border bg-background px-4 py-4 text-sm text-muted-foreground">
+                      Sem vínculo com clínica também aparece aqui.
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
@@ -273,6 +565,11 @@ export default function AppointmentsScreen() {
               <div>
                 <label className="mb-2 block text-foreground">Motivo</label>
                 <textarea value={reason} onChange={(e) => setReason(e.target.value)} className="min-h-[110px] w-full rounded-[18px] border border-border bg-[#efe9de] px-4 py-3 text-foreground outline-none transition-colors focus:border-primary" rows={3} placeholder="Ex: Checkup anual, vacinação, sintomas de prostração, etc." required />
+              </div>
+
+              <div className={`rounded-[22px] border px-4 py-3 text-sm ${availability.isAvailable === false ? 'border-amber-200 bg-amber-50 text-amber-800' : availability.isAvailable ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-border bg-muted/20 text-muted-foreground'}`}>
+                <p>{availability.loading ? 'Verificando disponibilidade...' : availability.message}</p>
+                {availability.busyTimes.length > 0 ? <p className="mt-1 text-xs">Horários ocupados: {availability.busyTimes.join(', ')}</p> : null}
               </div>
 
               <button type="submit" className="inline-flex w-full items-center justify-center gap-2 rounded-[18px] bg-primary py-3 text-white transition-colors hover:bg-primary/90">
@@ -396,4 +693,10 @@ export default function AppointmentsScreen() {
     </TutorShell>
   );
 }
+
+
+
+
+
+
 

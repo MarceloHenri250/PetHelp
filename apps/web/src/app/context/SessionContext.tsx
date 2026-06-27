@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+﻿import React, { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import {
   decodeJwtPayload,
   getApiBase,
@@ -36,6 +36,7 @@ interface SessionContextValue {
     specialty?: string;
     phone?: string | null;
   }) => Promise<User>;
+  deactivateCurrentUserAccount: () => Promise<void>;
   deleteCurrentUserAccount: () => Promise<void>;
   logout: () => void;
 }
@@ -245,6 +246,19 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('token');
   };
 
+  const deactivateCurrentUserAccount = async () => {
+    const resp = await fetch(`${API_BASE}/api/users/me/deactivate`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+    });
+
+    if (!resp.ok && resp.status !== 204) {
+      throw new Error((await resp.json()).message ?? 'Account deactivation failed');
+    }
+
+    logout();
+  };
+
   const deleteCurrentUserAccount = async () => {
     const resp = await fetch(`${API_BASE}/api/users/me`, {
       method: 'DELETE',
@@ -270,6 +284,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         updateCurrentUserProfile,
         updateClinicProfile,
         updateVeterinarianProfile,
+        deactivateCurrentUserAccount,
         deleteCurrentUserAccount,
         logout,
       }}
@@ -286,4 +301,5 @@ export function useSession() {
   }
   return context;
 }
+
 

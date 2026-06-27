@@ -74,6 +74,7 @@ export interface Appointment {
   veterinarianName?: string | null;
   veterinarianEmail?: string | null;
   veterinarianPhone?: string | null;
+  vetPassCode?: string;
   targetType?: 'clinic' | 'veterinarian';
   date: string;
   time: string;
