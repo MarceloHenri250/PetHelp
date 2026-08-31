@@ -12,7 +12,7 @@ Monorepo do PetHelp, com frontend web em React e backend em Express + TypeScript
 
 - Node.js 20+ recomendado
 - pnpm 11+
-- MySQL para o backend
+- PostgreSQL 18 para o backend (porta 5433 na instalação local)
 
 ## Instalacao
 
@@ -49,7 +49,7 @@ pnpm build:web
 
 ## Backend
 
-API em Express, TypeScript e MySQL.
+API em Express, TypeScript e PostgreSQL.
 
 ### Rodar localmente
 
@@ -67,6 +67,14 @@ pnpm build:backend
 
 ```bash
 pnpm start:backend
+```
+
+### Banco de dados
+
+Configure `services/backend/.env` com as variáveis `POSTGRES_*`. Para recriar o banco de desenvolvimento e aplicar o schema:
+
+```bash
+npm.cmd --prefix services/backend run db:reset -- --yes
 ```
 
 ### Verificacao de tipos
