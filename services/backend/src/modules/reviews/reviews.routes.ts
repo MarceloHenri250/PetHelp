@@ -1,10 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import { Router } from 'express';
-import type { PoolConnection, ResultSetHeader, RowDataPacket } from 'mysql2/promise';
+import type { PoolConnection, ResultSetHeader, RowDataPacket } from '../../db/types.js';
 import { pool } from '../../db/index.js';
 import type { AuthRequest } from '../../middlewares/auth.js';
 import { requireAuth } from '../../middlewares/auth.js';
-import { findTutorByUserId } from '../users/users.service.js';
+import { findClinicByUserId, findTutorByUserId, findVeterinarianByUserId } from '../users/users.service.js';
 
 type ReviewRow = RowDataPacket & {
   id: string;
@@ -40,6 +40,16 @@ async function resolveCurrentTutorId(user: AuthRequest['user']) {
   if (user?.userType !== 'tutor') return null;
   const tutor = await findTutorByUserId(user.id);
   return tutor?.id ?? null;
+}
+
+/** Accepts either a veterinarians.id or the vet owner's users.id and returns the veterinarians.id. */
+async function resolveVeterinarianProfileId(db: DbClient, value: string) {
+  if (!value) return null;
+  const [rows] = await db.query<RowDataPacket[]>(
+    'SELECT id FROM veterinarians WHERE id = ? OR user_id = ? LIMIT 1',
+    [value, value]
+  );
+  return rows[0]?.id ? String(rows[0].id) : null;
 }
 
 async function loadReviewById(db: DbClient, reviewId: string) {
@@ -129,33 +139,84 @@ router.use(requireAuth);
 
 router.get('/me', async (req: AuthRequest, res, next) => {
   try {
-    const tutorId = await resolveCurrentTutorId(req.user);
-    if (!tutorId) {
-      res.status(403).json({ message: 'Forbidden' });
+    const reviewColumns = `
+      id,
+      appointment_id,
+      pet_id,
+      tutor_id,
+      veterinarian_id,
+      clinic_name,
+      rating,
+      comment,
+      created_at,
+      updated_at
+    `;
+
+    if (req.user?.userType === 'tutor') {
+      const tutorId = await resolveCurrentTutorId(req.user);
+      if (!tutorId) {
+        res.status(403).json({ message: 'Forbidden' });
+        return;
+      }
+
+      const [rows] = await pool.query<ReviewRow[]>(
+        `SELECT ${reviewColumns} FROM reviews WHERE tutor_id = ? ORDER BY created_at DESC`,
+        [tutorId]
+      );
+
+      res.json({ data: rows.map(normalizeReview) });
       return;
     }
 
-    const [rows] = await pool.query<ReviewRow[]>(
-      `
-        SELECT
-          id,
-          appointment_id,
-          pet_id,
-          tutor_id,
-          veterinarian_id,
-          clinic_name,
-          rating,
-          comment,
-          created_at,
-          updated_at
-        FROM reviews
-        WHERE tutor_id = ?
-        ORDER BY created_at DESC
-      `,
-      [tutorId]
-    );
+    if (req.user?.userType === 'veterinarian') {
+      const veterinarian = await findVeterinarianByUserId(req.user.id);
+      if (!veterinarian) {
+        res.status(403).json({ message: 'Forbidden' });
+        return;
+      }
 
-    res.json({ data: rows.map(normalizeReview) });
+      const [rows] = await pool.query<ReviewRow[]>(
+        `SELECT ${reviewColumns} FROM reviews WHERE veterinarian_id = ? ORDER BY created_at DESC`,
+        [veterinarian.id]
+      );
+
+      res.json({ data: rows.map(normalizeReview) });
+      return;
+    }
+
+    if (req.user?.userType === 'clinic') {
+      const clinic = await findClinicByUserId(req.user.id);
+      if (!clinic) {
+        res.status(403).json({ message: 'Forbidden' });
+        return;
+      }
+
+      const [rows] = await pool.query<ReviewRow[]>(
+        `
+          SELECT
+            r.id,
+            r.appointment_id,
+            r.pet_id,
+            r.tutor_id,
+            r.veterinarian_id,
+            r.clinic_name,
+            r.rating,
+            r.comment,
+            r.created_at,
+            r.updated_at
+          FROM reviews r
+          JOIN appointments a ON a.id = r.appointment_id
+          WHERE a.clinic_id = ? OR r.clinic_name = ?
+          ORDER BY r.created_at DESC
+        `,
+        [clinic.id, clinic.trade_name]
+      );
+
+      res.json({ data: rows.map(normalizeReview) });
+      return;
+    }
+
+    res.status(403).json({ message: 'Forbidden' });
   } catch (error) {
     next(error);
   }
@@ -278,7 +339,8 @@ router.post('/', async (req: AuthRequest, res, next) => {
       return;
     }
 
-    const veterinarianId = asTrimmedString(body.veterinarianId) || appointment.veterinarian_id || '';
+    const requestedVeterinarianId = asTrimmedString(body.veterinarianId) || appointment.veterinarian_id || '';
+    const veterinarianId = await resolveVeterinarianProfileId(connection, requestedVeterinarianId);
     if (!veterinarianId) {
       res.status(400).json({ message: 'veterinarianId is required' });
       return;

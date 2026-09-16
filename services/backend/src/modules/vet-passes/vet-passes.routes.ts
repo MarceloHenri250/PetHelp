@@ -1,6 +1,6 @@
 ﻿import { randomUUID } from 'node:crypto';
 import { Router } from 'express';
-import type { PoolConnection, ResultSetHeader, RowDataPacket } from 'mysql2/promise';
+import type { PoolConnection, ResultSetHeader, RowDataPacket } from '../../db/types.js';
 import { pool } from '../../db/index.js';
 import type { AuthRequest } from '../../middlewares/auth.js';
 import { requireAuth } from '../../middlewares/auth.js';
@@ -157,8 +157,9 @@ router.post('/', async (req: AuthRequest, res, next) => {
       return;
     }
 
-    if (!petId || !petName || documents.length === 0) {
-      res.status(400).json({ message: 'petId, petName and documents are required' });
+    // Anexos são opcionais: dá para gerar um Vet-Pass mesmo sem exames anexados.
+    if (!petId || !petName) {
+      res.status(400).json({ message: 'petId and petName are required' });
       return;
     }
 
@@ -227,6 +228,11 @@ router.post('/:code/redeem', async (req: AuthRequest, res, next) => {
       return;
     }
 
+    if (pass.redeemed_by_user_id && pass.redeemed_by_user_id !== req.user.id) {
+      res.status(409).json({ message: 'Vet-Pass has already been redeemed by another veterinarian' });
+      return;
+    }
+
     await connection.beginTransaction();
     await connection.execute(
       'UPDATE vet_passes SET redeemed_by_user_id = ?, redeemed_at = COALESCE(redeemed_at, CURRENT_TIMESTAMP) WHERE pass_code = ?',
@@ -266,6 +272,11 @@ router.get('/:code', async (req: AuthRequest, res, next) => {
       }
     }
 
+    if (req.user?.userType === 'veterinarian' && pass.redeemed_by_user_id !== req.user.id) {
+      res.status(403).json({ message: 'Redeem this Vet-Pass before accessing its documents' });
+      return;
+    }
+
     res.json({ data: normalizeVetPass(pass) });
   } catch (error) {
     next(error);
@@ -300,6 +311,4 @@ router.delete('/:code', async (req: AuthRequest, res, next) => {
 });
 
 export default router;
-
-
 

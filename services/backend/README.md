@@ -55,18 +55,19 @@ The backend reads these variables from `.env`:
 
 - `PORT`
 - `CORS_ORIGIN`
-- `MYSQL_HOST`
-- `MYSQL_PORT`
-- `MYSQL_USER`
-- `MYSQL_PASSWORD`
-- `MYSQL_DATABASE`
+- `POSTGRES_HOST`
+- `POSTGRES_PORT`
+- `POSTGRES_USER`
+- `POSTGRES_PASSWORD`
+- `POSTGRES_DATABASE`
+- `POSTGRES_ADMIN_DATABASE`
 - `JWT_SECRET`
 
 ## Database
 
-- `src/db/reset-db.ts` drops and recreates the configured database, then applies `src/db/schema.sql`.
-- `src/db/ensure-schema.ts` applies incremental schema adjustments used at startup.
-- `src/db/pool.ts` exports the shared MySQL pool.
+- `src/db/reset-db.ts` drops and recreates the configured PostgreSQL database, then applies `src/db/schema.sql`.
+- `src/db/ensure-schema.ts` applies the idempotent schema at startup.
+- `src/db/pool.ts` exports the shared PostgreSQL pool.
 
 ## Routes
 

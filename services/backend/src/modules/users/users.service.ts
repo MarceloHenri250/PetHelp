@@ -1,6 +1,5 @@
 ﻿import { randomUUID } from 'node:crypto';
-import type { PoolConnection } from 'mysql2/promise';
-import type { RowDataPacket } from 'mysql2';
+import type { PoolConnection, RowDataPacket } from '../../db/types.js';
 import { pool } from '../../db/index.js';
 
 export type UserType = 'tutor' | 'clinic' | 'veterinarian';
@@ -12,6 +11,7 @@ type AuthUserRow = RowDataPacket & {
   email: string;
   password_hash: string;
   user_type: UserType;
+  is_active: boolean;
   created_at: Date;
   updated_at: Date;
 };
@@ -573,16 +573,17 @@ export async function listVeterinarianProfiles(query?: string, specialty?: strin
     whereParts.push(`EXISTS (
       SELECT 1
       FROM clinic_veterinarians cv
+      JOIN clinics cl ON cl.id = cv.clinic_id
       WHERE cv.veterinarian_id = v.id
-        AND cv.clinic_id = ?
+        AND (cl.id = ? OR cl.user_id = ?)
         AND cv.status = 'approved'
     )`);
-    values.push(clinicFilter);
+    values.push(clinicFilter, clinicFilter);
   }
 
   const [rows] = await pool.query<RowDataPacket[]>(
     `
-      SELECT DISTINCT u.id
+      SELECT DISTINCT u.id, v.name
       FROM users u
       INNER JOIN veterinarians v ON v.user_id = u.id
       WHERE ${whereParts.join(' AND ')}
@@ -595,5 +596,3 @@ export async function listVeterinarianProfiles(query?: string, specialty?: strin
   const profiles = await Promise.all(rows.map((row) => getUserProfileById(String(row.id))));
   return profiles.filter((profile): profile is PublicUserRecord => profile !== null && profile.user_type === 'veterinarian');
 }
-
-

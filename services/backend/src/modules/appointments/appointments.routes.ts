@@ -1,6 +1,6 @@
 ﻿import { randomUUID } from 'node:crypto';
 import { Router } from 'express';
-import type { PoolConnection, ResultSetHeader, RowDataPacket } from 'mysql2/promise';
+import type { PoolConnection, ResultSetHeader, RowDataPacket } from '../../db/types.js';
 import { pool } from '../../db/index.js';
 import type { AuthRequest } from '../../middlewares/auth.js';
 import { requireAuth } from '../../middlewares/auth.js';
@@ -71,6 +71,26 @@ async function resolveCurrentVeterinarianId(user: AuthRequest['user']) {
   if (user?.userType !== 'veterinarian') return null;
   const veterinarian = await findVeterinarianByUserId(user.id);
   return veterinarian?.id ?? null;
+}
+
+/** Accepts either a clinics.id or the clinic owner's users.id and returns the clinics.id. */
+async function resolveClinicProfileId(db: DbClient, value: string) {
+  if (!value) return null;
+  const [rows] = await db.query<RowDataPacket[]>(
+    'SELECT id FROM clinics WHERE id = ? OR user_id = ? LIMIT 1',
+    [value, value]
+  );
+  return rows[0]?.id ? String(rows[0].id) : null;
+}
+
+/** Accepts either a veterinarians.id or the vet owner's users.id and returns the veterinarians.id. */
+async function resolveVeterinarianProfileId(db: DbClient, value: string) {
+  if (!value) return null;
+  const [rows] = await db.query<RowDataPacket[]>(
+    'SELECT id FROM veterinarians WHERE id = ? OR user_id = ? LIMIT 1',
+    [value, value]
+  );
+  return rows[0]?.id ? String(rows[0].id) : null;
 }
 
 function normalizeAppointment(row: AppointmentRow) {
@@ -358,11 +378,14 @@ router.get('/availability', async (req: AuthRequest, res, next) => {
       return;
     }
 
+    const resolvedClinicId = clinicId ? await resolveClinicProfileId(pool, clinicId) : null;
+    const resolvedVeterinarianId = veterinarianId ? await resolveVeterinarianProfileId(pool, veterinarianId) : null;
+
     const availability = await resolveAvailability(pool, {
       date,
       time,
-      clinicId: clinicId || null,
-      veterinarianId: veterinarianId || null,
+      clinicId: resolvedClinicId,
+      veterinarianId: resolvedVeterinarianId,
     });
 
     res.json({
@@ -414,11 +437,6 @@ router.post('/', async (req: AuthRequest, res, next) => {
       return;
     }
 
-    if (!vetPassCode) {
-      res.status(400).json({ message: 'vetPassCode is required' });
-      return;
-    }
-
     const access = await canAccessPet(req.user, petId);
     if (!access.allowed) {
       res.status(access.status ?? 403).json({ message: access.message });
@@ -434,24 +452,38 @@ router.post('/', async (req: AuthRequest, res, next) => {
       return;
     }
 
-    const vetPass = await loadVetPassByCode(connection, vetPassCode);
-    if (!vetPass) {
-      res.status(404).json({ message: 'Vet-Pass not found' });
+    // O Vet-Pass é opcional no agendamento. Se for informado, validamos que pertence
+    // ao mesmo tutor/pet e que não está expirado.
+    if (vetPassCode) {
+      const vetPass = await loadVetPassByCode(connection, vetPassCode);
+      if (!vetPass) {
+        res.status(404).json({ message: 'Vet-Pass not found' });
+        return;
+      }
+
+      if (vetPass.tutor_id !== nextTutorId || vetPass.pet_id !== petId) {
+        res.status(403).json({ message: 'Vet-Pass does not match the selected pet' });
+        return;
+      }
+
+      if (new Date(vetPass.expires_at).getTime() < Date.now()) {
+        res.status(410).json({ message: 'Vet-Pass expired' });
+        return;
+      }
+    }
+
+    const nextClinicId = clinicIdInput ? await resolveClinicProfileId(connection, clinicIdInput) : null;
+    const nextVeterinarianId = veterinarianIdInput ? await resolveVeterinarianProfileId(connection, veterinarianIdInput) : null;
+
+    if (clinicIdInput && !nextClinicId) {
+      res.status(404).json({ message: 'Clinic not found' });
       return;
     }
 
-    if (vetPass.tutor_id !== nextTutorId || vetPass.pet_id !== petId) {
-      res.status(403).json({ message: 'Vet-Pass does not match the selected pet' });
+    if (veterinarianIdInput && !nextVeterinarianId) {
+      res.status(404).json({ message: 'Veterinarian not found' });
       return;
     }
-
-    if (new Date(vetPass.expires_at).getTime() < Date.now()) {
-      res.status(410).json({ message: 'Vet-Pass expired' });
-      return;
-    }
-
-    const nextClinicId = clinicIdInput || null;
-    const nextVeterinarianId = veterinarianIdInput || null;
 
     if (resolvedTargetType === 'clinic' && !nextClinicId) {
       res.status(400).json({ message: 'clinicId is required for clinic appointments' });
@@ -679,5 +711,4 @@ router.delete('/:id', async (req: AuthRequest, res, next) => {
 });
 
 export default router;
-
 
