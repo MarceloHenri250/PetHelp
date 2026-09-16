@@ -56,8 +56,8 @@ export default function VeterinarianShell({ active, title, description, actions,
   const navItems: NavItem[] = [
     { key: 'dashboard', label: 'Dashboard', icon: Home, path: dashboardPath, visibleFor: ['veterinarian'] },
     { key: 'agenda', label: 'Agenda', icon: CalendarDays, path: '/veterinarian-schedule', visibleFor: ['veterinarian'] },
-    { key: 'links', label: 'Vínculos (Em desenvolvimento)', icon: Link2, path: '/veterinarian-links', visibleFor: ['veterinarian'] },
-    { key: 'history', label: 'Histórico (Em desenvolvimento)', icon: ClipboardList, path: '/veterinarian-history', visibleFor: ['veterinarian'] },
+    { key: 'links', label: 'Vínculos', icon: Link2, path: '/veterinarian-links', visibleFor: ['veterinarian'] },
+    { key: 'history', label: 'Histórico', icon: ClipboardList, path: '/veterinarian-history', visibleFor: ['veterinarian'] },
     { key: 'settings', label: 'Config.', icon: Settings, path: settingsPath, visibleFor: ['veterinarian'] },
   ].filter((item) => !item.visibleFor || item.visibleFor.includes(currentUserType));
 
@@ -79,6 +79,7 @@ export default function VeterinarianShell({ active, title, description, actions,
             <div className="hidden text-right md:block">
               <p className="text-sm text-muted-foreground">Olá, {veterinarianName}</p>
             </div>
+            <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">Veterinário</span>
             <ThemeToggle />
             <button
               type="button"
@@ -154,7 +155,6 @@ export default function VeterinarianShell({ active, title, description, actions,
     </div>
   );
 }
-
 
 
 

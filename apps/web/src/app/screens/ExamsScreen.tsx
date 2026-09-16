@@ -1,5 +1,6 @@
 ﻿import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Copy, Download, Eye, FileText, Mail, Paperclip, ShieldCheck } from 'lucide-react';
+import { toast } from 'sonner';
 import { decodeExamDocument, getApiBase, getAuthHeaders, type VetPassRecord } from '../context/shared';
 import { useHealth } from '../context/HealthContext';
 import { usePets } from '../context/PetsContext';
@@ -78,28 +79,39 @@ export default function ExamsScreen() {
   const selectedAttachments = attachments.filter((attachment) => selectedKeys.includes(attachment.key));
 
   const handleGenerateVetPass = async () => {
-    if (!currentPet || selectedAttachments.length === 0) return;
-
-    const resp = await fetch(`${API_BASE}/api/vet-passes`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...getAuthHeaders(),
-      },
-      body: JSON.stringify({
-        petId: currentPet.id,
-        petName: currentPet.name,
-        documents: selectedAttachments.map(({ name, type, size, dataUrl }) => ({ name, type, size, dataUrl })),
-        expiresInDays: 30,
-      }),
-    });
-
-    if (!resp.ok) {
-      throw new Error((await resp.json()).message ?? 'Create Vet-Pass failed');
+    if (!currentPet) {
+      toast.error('Selecione um pet antes de gerar o Vet-Pass.');
+      return;
     }
 
-    const { data } = await resp.json();
-    setCreatedPass(toUiVetPass(data));
+    try {
+      const resp = await fetch(`${API_BASE}/api/vet-passes`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeaders(),
+        },
+        body: JSON.stringify({
+          petId: currentPet.id,
+          petName: currentPet.name,
+          // Anexos são opcionais — se nenhum estiver selecionado, gera um passe sem exames.
+          documents: selectedAttachments.map(({ name, type, size, dataUrl }) => ({ name, type, size, dataUrl })),
+          expiresInDays: 30,
+        }),
+      });
+
+      if (!resp.ok) {
+        const payload = await resp.json().catch(() => null);
+        throw new Error(payload?.message ?? 'Create Vet-Pass failed');
+      }
+
+      const { data } = await resp.json();
+      setCreatedPass(toUiVetPass(data));
+      toast.success('Vet-Pass gerado com sucesso!');
+    } catch (error) {
+      console.error('Falha ao gerar Vet-Pass:', error);
+      toast.error('Não foi possível gerar o Vet-Pass. Tente novamente.');
+    }
   };
 
   const handleRedeemVetPass = async () => {
@@ -187,8 +199,8 @@ export default function ExamsScreen() {
             <div className="space-y-4">
               <section className="rounded-[34px] border border-border/70 bg-card p-5 shadow-[0_24px_60px_-36px_rgba(127,162,106,0.18)]">
                 <h2 className="mb-2 text-xl text-foreground">Gerar Vet-Pass</h2>
-                <p className="mb-4 text-sm text-muted-foreground">O código libera apenas os anexos selecionados por 30 dias.</p>
-                <button type="button" onClick={() => void handleGenerateVetPass()} disabled={attachments.length === 0 || selectedKeys.length === 0} className="inline-flex w-full items-center justify-center gap-2 rounded-[18px] bg-primary px-4 py-3 text-white transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50">
+                <p className="mb-4 text-sm text-muted-foreground">O código dá acesso temporário (30 dias) ao pet. Anexar exames é opcional — se selecionar, eles também ficam liberados.</p>
+                <button type="button" onClick={() => void handleGenerateVetPass()} className="inline-flex w-full items-center justify-center gap-2 rounded-[18px] bg-primary px-4 py-3 text-white transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50">
                   <ShieldCheck className="h-4 w-4" />
                   Gerar código
                 </button>

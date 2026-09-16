@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { Router } from 'express';
-import type { PoolConnection, ResultSetHeader, RowDataPacket } from 'mysql2/promise';
+import type { PoolConnection, ResultSetHeader, RowDataPacket } from '../../db/types.js';
 import { pool } from '../../db/index.js';
 import type { AuthRequest } from '../../middlewares/auth.js';
 import { requireAuth } from '../../middlewares/auth.js';
@@ -103,6 +103,38 @@ async function resolveTargetUserId(user: AuthRequest['user']) {
   return null;
 }
 
+/** Resolves tutor profile ids used by appointments to their authenticated user. */
+async function resolveRecipientUserId(req: AuthRequest, body: Record<string, unknown>) {
+  const actor = req.user;
+  if (!actor) return null;
+  const ownUserId = await resolveTargetUserId(req.user);
+  const requestedId = asTrimmedString(body.userId);
+
+  if (!ownUserId || !requestedId || requestedId === ownUserId) return ownUserId;
+
+  const appointmentId = asTrimmedString(body.appointmentId);
+  if (!appointmentId || (actor.userType !== 'clinic' && actor.userType !== 'veterinarian')) return null;
+
+  const [tutorRows] = await pool.query<RowDataPacket[]>('SELECT id, user_id FROM tutors WHERE id = ? LIMIT 1', [requestedId]);
+  const tutor = tutorRows[0] as { id: string; user_id: string } | undefined;
+  if (!tutor) return null;
+
+  const [appointmentRows] = await pool.query<RowDataPacket[]>(
+    'SELECT tutor_id, clinic_id, veterinarian_id FROM appointments WHERE id = ? LIMIT 1',
+    [appointmentId]
+  );
+  const appointment = appointmentRows[0] as { tutor_id: string; clinic_id: string | null; veterinarian_id: string | null } | undefined;
+  if (!appointment || appointment.tutor_id !== tutor.id) return null;
+
+  if (actor.userType === 'clinic') {
+    const clinic = await findClinicByUserId(actor.id);
+    return clinic?.id === appointment.clinic_id ? tutor.user_id : null;
+  }
+
+  const veterinarian = await findVeterinarianByUserId(actor.id);
+  return veterinarian?.id === appointment.veterinarian_id ? tutor.user_id : null;
+}
+
 router.use(requireAuth);
 
 router.get('/me', async (req: AuthRequest, res, next) => {
@@ -129,14 +161,14 @@ router.post('/', async (req: AuthRequest, res, next) => {
 
   try {
     const body = req.body ?? {};
-    const userId = asTrimmedString(body.userId) || (await resolveTargetUserId(req.user)) || '';
+    const userId = (await resolveRecipientUserId(req, body)) || '';
     const type = asTrimmedString(body.type) as NotificationRow['type'];
     const title = asTrimmedString(body.title);
     const message = asTrimmedString(body.message);
     const notificationDate = asTrimmedString(body.date ?? body.notificationDate) || new Date().toISOString().slice(0, 10);
 
     if (!userId || !type || !title || !message) {
-      res.status(400).json({ message: 'userId, type, title and message are required' });
+      res.status(400).json({ message: 'A valid recipient, type, title and message are required' });
       return;
     }
 

@@ -2,82 +2,74 @@ import { readFile } from 'node:fs/promises';
 import { createInterface } from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
 import { fileURLToPath } from 'node:url';
-import mysql from 'mysql2/promise';
+import { Client } from 'pg';
 import { env } from '../config/env.js';
 
 const schemaPath = fileURLToPath(new URL('./schema.sql', import.meta.url));
-const databaseName = env.mysql.database;
+const sourceSchemaPath = fileURLToPath(new URL('../../src/db/schema.sql', import.meta.url));
+const databaseName = env.postgres.database;
 const forceReset = process.argv.includes('--yes') || process.argv.includes('-y');
 
 function quoteIdentifier(identifier: string) {
-  return `\`${identifier.replace(/`/g, '``')}\``;
+  return `"${identifier.replace(/"/g, '""')}"`;
 }
 
 async function confirmReset() {
-  if (forceReset) {
-    return;
-  }
-
+  if (forceReset) return;
   if (!input.isTTY || !output.isTTY) {
     throw new Error(`Refusing to reset ${databaseName} without an interactive terminal. Re-run with --yes.`);
   }
 
-  const rl = createInterface({ input, output });
-
+  const readline = createInterface({ input, output });
   try {
-    const answer = await rl.question(
-      `This will DROP and recreate database "${databaseName}". Type ${databaseName} to continue: `,
-    );
-
-    if (answer.trim() !== databaseName) {
-      throw new Error('Database reset cancelled.');
-    }
+    const answer = await readline.question(`This will DROP and recreate database "${databaseName}". Type ${databaseName} to continue: `);
+    if (answer.trim() !== databaseName) throw new Error('Database reset cancelled.');
   } finally {
-    rl.close();
+    readline.close();
   }
 }
 
 async function main() {
   await confirmReset();
-
-  const connection = await mysql.createConnection({
-    host: env.mysql.host,
-    port: env.mysql.port,
-    user: env.mysql.user,
-    password: env.mysql.password,
-    multipleStatements: true,
-  });
-
-  const quotedDatabase = quoteIdentifier(databaseName);
+  const config = {
+    host: env.postgres.host, port: env.postgres.port, user: env.postgres.user,
+    password: env.postgres.password,
+  };
+  const admin = new Client({ ...config, database: env.postgres.adminDatabase });
+  await admin.connect();
 
   try {
+    const quotedDatabase = quoteIdentifier(databaseName);
+    await admin.query(`SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1 AND pid <> pg_backend_pid()`, [databaseName]);
     console.log(`Dropping database ${databaseName}...`);
-    await connection.query(`DROP DATABASE IF EXISTS ${quotedDatabase};`);
-
+    await admin.query(`DROP DATABASE IF EXISTS ${quotedDatabase}`);
     console.log(`Creating database ${databaseName}...`);
-    await connection.query(
-      `CREATE DATABASE ${quotedDatabase} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`,
-    );
+    await admin.query(`CREATE DATABASE ${quotedDatabase}`);
+  } finally {
+    await admin.end();
+  }
 
-    const schemaSql = await readFile(schemaPath, 'utf8');
-
-    console.log(`Applying schema from ${schemaPath}...`);
-    await connection.query(schemaSql);
-
+  const app = new Client({ ...config, database: databaseName });
+  await app.connect();
+  try {
+    let schemaSql: string;
+    let usedSchemaPath = schemaPath;
+    try {
+      schemaSql = await readFile(schemaPath, 'utf8');
+    } catch {
+      usedSchemaPath = sourceSchemaPath;
+      schemaSql = await readFile(sourceSchemaPath, 'utf8');
+    }
+    console.log(`Applying schema from ${usedSchemaPath}...`);
+    await app.query(schemaSql);
     console.log(`Database ${databaseName} reset successfully.`);
   } finally {
-    await connection.end();
+    await app.end();
   }
 }
 
 main().catch((error: unknown) => {
   console.error('Database reset failed.');
-
-  if (error instanceof Error) {
-    console.error(error.message);
-  } else {
-    console.error(error);
-  }
-
+  console.error(error instanceof Error ? error.message : error);
   process.exitCode = 1;
 });

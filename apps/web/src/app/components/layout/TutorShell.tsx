@@ -56,11 +56,11 @@ export function TutorShell({ active, title, description, actions, children }: Tu
     { key: 'home', label: 'Início', icon: Home, path: dashboardPath, visibleFor: ['owner', 'veterinarian', 'clinic'] },
     { key: 'profile', label: 'Perfil do pet', icon: PawPrint, path: '/pet-profile', visibleFor: ['owner', 'veterinarian'] },
     { key: 'transfer', label: 'Transferir pet', icon: ArrowLeftRight, path: '/pet-transfer', visibleFor: ['owner'] },
-    { key: 'connection', label: 'Conexão clínica (Em desenvolvimento)', icon: Link2, path: '/connection', visibleFor: ['owner', 'veterinarian'] },
+    { key: 'connection', label: 'Conexão clínica', icon: Link2, path: '/connection', visibleFor: ['owner', 'veterinarian'] },
     { key: 'records', label: 'Prontuário', icon: ClipboardList, path: '/medical-history', visibleFor: ['owner', 'veterinarian'] },
     { key: 'vaccines', label: 'Vacinas', icon: Syringe, path: '/vaccines', visibleFor: ['owner', 'veterinarian'] },
     { key: 'exams', label: 'Exames', icon: FileText, path: '/exams', visibleFor: ['owner', 'veterinarian'] },
-    { key: 'appointments', label: 'Agenda (Em desenvolvimento)', icon: Calendar, path: '/appointments', visibleFor: ['owner', 'veterinarian'] },
+    { key: 'appointments', label: 'Agenda', icon: Calendar, path: '/appointments', visibleFor: ['owner', 'veterinarian'] },
     { key: 'settings', label: 'Config.', icon: Settings, path: settingsPath, visibleFor: ['owner', 'clinic', 'veterinarian'] },
   ].filter((item) => !item.visibleFor || item.visibleFor.includes(currentUserType));
 
@@ -82,6 +82,7 @@ export function TutorShell({ active, title, description, actions, children }: Tu
             <div className="hidden text-right md:block">
               <p className="text-sm text-muted-foreground">Olá, {user?.name || 'Tutor'}</p>
             </div>
+            <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">Tutor</span>
             <ThemeToggle />
             <button
               type="button"

@@ -88,7 +88,10 @@ export default function ClinicHistoryScreen() {
 
   const formatDate = (value: string | undefined) => {
     if (!value) return 'Data indisponível';
-    const parsed = new Date(value);
+    // Date-only strings (YYYY-MM-DD) parse as UTC midnight, which shifts a day back
+    // in negative-offset timezones. Anchor them to local noon to keep the calendar date.
+    const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(value);
+    const parsed = new Date(isDateOnly ? `${value}T12:00:00` : value);
     return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleDateString('pt-BR');
   };
 

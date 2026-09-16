@@ -19,7 +19,7 @@ export async function requireAuth(req: AuthRequest, res: Response, next: NextFun
 
     const payload = jwt.verify(auth, env.jwtSecret) as any;
     const user = await findUserById(payload.sub);
-    if (!user) return res.status(401).json({ message: 'Invalid token' });
+    if (!user || !user.is_active) return res.status(401).json({ message: 'Invalid token' });
 
     req.user = { id: user.id, email: user.email, userType: user.user_type };
     next();
@@ -27,5 +27,4 @@ export async function requireAuth(req: AuthRequest, res: Response, next: NextFun
     return res.status(401).json({ message: 'Invalid token' });
   }
 }
-
 

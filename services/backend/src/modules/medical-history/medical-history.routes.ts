@@ -1,10 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import { Router } from 'express';
-import type { PoolConnection, ResultSetHeader, RowDataPacket } from 'mysql2/promise';
+import type { PoolConnection, ResultSetHeader, RowDataPacket } from '../../db/types.js';
 import { pool } from '../../db/index.js';
 import type { AuthRequest } from '../../middlewares/auth.js';
 import { requireAuth } from '../../middlewares/auth.js';
-import { findTutorByUserId } from '../users/users.service.js';
+import { canAccessPetHealthData } from '../pets/pet-access.js';
 
 type MedicalRecordRow = RowDataPacket & {
   id: string;
@@ -113,38 +113,6 @@ function normalizeMedicalRecord(row: MedicalRecordRow) {
   };
 }
 
-async function loadPetById(db: DbClient, petId: string) {
-  const [rows] = await db.query<RowDataPacket[]>(
-    'SELECT id, current_tutor_id FROM pets WHERE id = ? LIMIT 1',
-    [petId]
-  );
-
-  return rows[0] as { id: string; current_tutor_id: string | null } | undefined;
-}
-
-async function resolveCurrentTutorId(user: AuthRequest['user']) {
-  if (user?.userType !== 'tutor') {
-    return null;
-  }
-
-  const tutor = await findTutorByUserId(user.id);
-  return tutor?.id ?? null;
-}
-
-async function canAccessPet(user: AuthRequest['user'], petId: string) {
-  const pet = await loadPetById(pool, petId);
-  if (!pet) return { allowed: false, status: 404, message: 'Pet not found' as const };
-
-  if (user?.userType === 'tutor') {
-    const tutorId = await resolveCurrentTutorId(user);
-    if (!tutorId || pet.current_tutor_id !== tutorId) {
-      return { allowed: false, status: 403, message: 'Forbidden' as const };
-    }
-  }
-
-  return { allowed: true, pet };
-}
-
 async function loadMedicalRecordById(db: DbClient, recordId: string) {
   const [rows] = await db.query<MedicalRecordRow[]>(
     `
@@ -176,7 +144,7 @@ router.use(requireAuth);
 
 router.get('/pet/:petId', async (req: AuthRequest, res, next) => {
   try {
-    const access = await canAccessPet(req.user, String(req.params.petId));
+    const access = await canAccessPetHealthData(req.user, String(req.params.petId));
     if (!access.allowed) {
       res.status(access.status ?? 403).json({ message: access.message });
       return;
@@ -219,7 +187,7 @@ router.get('/:id', async (req: AuthRequest, res, next) => {
       return;
     }
 
-    const access = await canAccessPet(req.user, existing.pet_id);
+    const access = await canAccessPetHealthData(req.user, existing.pet_id);
     if (!access.allowed) {
       res.status(access.status ?? 403).json({ message: access.message });
       return;
@@ -235,7 +203,7 @@ router.post('/pet/:petId', async (req: AuthRequest, res, next) => {
   const connection = await pool.getConnection();
 
   try {
-    const access = await canAccessPet(req.user, String(req.params.petId));
+    const access = await canAccessPetHealthData(req.user, String(req.params.petId));
     if (!access.allowed) {
       res.status(access.status ?? 403).json({ message: access.message });
       return;
@@ -311,7 +279,7 @@ router.patch('/:id', async (req: AuthRequest, res, next) => {
       return;
     }
 
-    const access = await canAccessPet(req.user, existing.pet_id);
+    const access = await canAccessPetHealthData(req.user, existing.pet_id);
     if (!access.allowed) {
       res.status(access.status ?? 403).json({ message: access.message });
       return;
@@ -407,7 +375,7 @@ router.delete('/:id', async (req: AuthRequest, res, next) => {
       return;
     }
 
-    const access = await canAccessPet(req.user, existing.pet_id);
+    const access = await canAccessPetHealthData(req.user, existing.pet_id);
     if (!access.allowed) {
       res.status(access.status ?? 403).json({ message: access.message });
       return;

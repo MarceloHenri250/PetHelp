@@ -452,7 +452,7 @@ const AUTH_STYLES = `
 `;
 
 const roleConfig: Record<AuthRole, { label: string; icon: React.ReactNode }> = {
-  owner: { label: 'Tutor', icon: <Heart size={20} /> },
+  owner: { label: 'Responsável pelo animal', icon: <Heart size={20} /> },
   veterinarian: { label: 'Veterinário', icon: <Stethoscope size={20} /> },
   clinic: { label: 'Clínica', icon: <Building2 size={20} /> },
 };

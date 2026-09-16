@@ -13,7 +13,7 @@ export function getWeekdayKey(date: string) {
     return null;
   }
 
-  return ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'S?b'][parsed.getDay()] ?? null;
+  return ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][parsed.getDay()] ?? null;
 }
 
 export function timeToMinutes(value: string) {

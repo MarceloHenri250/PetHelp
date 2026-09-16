@@ -13,6 +13,7 @@ interface PetsContextValue {
   currentPet: Pet | null;
   setCurrentPet: (pet: Pet | null) => void;
   pets: Pet[];
+  loading: boolean;
   addPet: (pet: PetMutationPayload) => Promise<void>;
   updatePet: (id: string, pet: PetMutationPayload) => Promise<void>;
   deletePet: (id: string) => Promise<void>;
@@ -27,6 +28,7 @@ export function PetsProvider({ children }: { children: ReactNode }) {
   const { addNotification } = useInteraction();
   const [currentPet, setCurrentPet] = useState<Pet | null>(null);
   const [pets, setPets] = useState<Pet[]>([]);
+  const [loading, setLoading] = useState(true);
   const API_BASE = getApiBase();
 
   useEffect(() => {
@@ -35,10 +37,12 @@ export function PetsProvider({ children }: { children: ReactNode }) {
     if (!user) {
       setPets([]);
       setCurrentPet(null);
+      setLoading(false);
       return;
     }
 
     let cancelled = false;
+    setLoading(true);
 
     const fetchPets = async () => {
       try {
@@ -72,6 +76,10 @@ export function PetsProvider({ children }: { children: ReactNode }) {
         if (!cancelled) {
           setPets([]);
           setCurrentPet(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
         }
       }
     };
@@ -255,6 +263,7 @@ export function PetsProvider({ children }: { children: ReactNode }) {
         currentPet,
         setCurrentPet,
         pets,
+        loading,
         addPet,
         updatePet,
         deletePet,

@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { Router } from 'express';
-import type { ResultSetHeader, RowDataPacket } from 'mysql2';
-import type { PoolConnection } from 'mysql2/promise';
+import type { PoolConnection, ResultSetHeader, RowDataPacket } from '../../db/types.js';
 import { pool } from '../../db/index.js';
 import type { AuthRequest } from '../../middlewares/auth.js';
 import { requireAuth } from '../../middlewares/auth.js';
@@ -238,7 +237,7 @@ petsRouter.get('/', async (req: AuthRequest, res, next) => {
     }
 
     if (!showInactive) {
-      conditions.push('is_active = 1');
+      conditions.push('is_active = TRUE');
     }
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
@@ -383,7 +382,7 @@ petsRouter.patch('/:id', async (req: AuthRequest, res, next) => {
     ] as const;
 
     const assignments: string[] = [];
-    const values: Array<string | number | null> = [];
+    const values: Array<string | number | boolean | null> = [];
     const nextCurrentTutorId = normalizeTutorId(body.currentTutorId) ?? normalizeTutorId(body.ownerId) ?? undefined;
 
     if (nextCurrentTutorId && nextCurrentTutorId !== tutorId) {
@@ -415,7 +414,7 @@ petsRouter.patch('/:id', async (req: AuthRequest, res, next) => {
       if (field === 'allergies' || field === 'conditions') {
         values.push(parseNullableJson(body[field]));
       } else if (field === 'isActive') {
-        values.push(toBoolean(body[field]) ? 1 : 0);
+        values.push(toBoolean(body[field]));
       } else if (field === 'currentTutorId' || field === 'ownerId') {
         values.push(nextCurrentTutorId ?? null);
       } else {
@@ -562,7 +561,7 @@ petsRouter.delete('/:id', async (req: AuthRequest, res, next) => {
       return;
     }
 
-    await connection.execute<ResultSetHeader>('UPDATE pets SET is_active = 0 WHERE id = ?', [String(req.params.id)]);
+    await connection.execute<ResultSetHeader>('UPDATE pets SET is_active = FALSE WHERE id = ?', [String(req.params.id)]);
     res.status(204).send();
   } catch (error) {
     next(error);
@@ -623,5 +622,4 @@ petsRouter.post('/:id/link-clinic', async (req: AuthRequest, res, next) => {
     connection.release();
   }
 });
-
 

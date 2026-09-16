@@ -1,5 +1,6 @@
 ﻿import React from 'react';
 import { useNavigate } from 'react-router';
+import { useState } from 'react';
 import { Bell, Calendar, Link as LinkIcon, Syringe } from 'lucide-react';
 import { ClinicShell } from '../components/layout/ClinicShell';
 import { TutorShell } from '../components/layout/TutorShell';
@@ -103,14 +104,28 @@ export default function NotificationsScreen() {
   const userNotifications = notifications.filter((notification) => notification.userId === user?.id);
   const clinicName = user?.clinicName || user?.name || 'Clínica';
   const unreadCount = userNotifications.filter((notification) => !notification.read).length;
+  const [pushStatus, setPushStatus] = useState(() =>
+    typeof window === 'undefined' || !window.Notification ? 'unsupported' : window.Notification.permission
+  );
 
   const handleMarkAllRead = async () => {
     await Promise.all(userNotifications.filter((notification) => !notification.read).map((notification) => markNotificationAsRead(notification.id)));
   };
 
+  const enablePushNotifications = async () => {
+    if (typeof window === 'undefined' || !window.Notification) return;
+    setPushStatus(await window.Notification.requestPermission());
+  };
+
+  const pushAction = pushStatus === 'default' ? (
+    <button type="button" onClick={() => void enablePushNotifications()} className="rounded-[18px] border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-primary transition-colors hover:bg-primary/10">
+      Ativar alertas do navegador
+    </button>
+  ) : null;
+
   if (currentUserType === 'veterinarian') {
     return (
-      <VeterinarianShell active="dashboard" title="Notificações" description="Alertas e histórico de mensagens do sistema.">
+      <VeterinarianShell active="dashboard" title="Notificações" description="Alertas e histórico de mensagens do sistema." actions={pushAction}>
         <NotificationsList notifications={userNotifications} onMarkRead={markNotificationAsRead} />
       </VeterinarianShell>
     );
@@ -123,14 +138,17 @@ export default function NotificationsScreen() {
         title="Notificações"
         description="Alertas, vínculos e histórico de mensagens da clínica."
         actions={
-          <button
-            type="button"
-            onClick={() => void handleMarkAllRead()}
-            disabled={unreadCount === 0}
-            className="inline-flex items-center gap-2 rounded-[18px] bg-primary px-5 py-3 text-white transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Marcar todas como lidas
-          </button>
+          <div className="flex flex-wrap gap-2">
+            {pushAction}
+            <button
+              type="button"
+              onClick={() => void handleMarkAllRead()}
+              disabled={unreadCount === 0}
+              className="inline-flex items-center gap-2 rounded-[18px] bg-primary px-5 py-3 text-white transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Marcar todas como lidas
+            </button>
+          </div>
         }
       >
         <section className="grid gap-4 md:grid-cols-3">
@@ -159,9 +177,8 @@ export default function NotificationsScreen() {
   }
 
   return (
-    <TutorShell active="home" title="Notificações" description="Alertas e histórico de mensagens do sistema.">
+    <TutorShell active="home" title="Notificações" description="Alertas e histórico de mensagens do sistema." actions={pushAction}>
       <NotificationsList notifications={userNotifications} onMarkRead={markNotificationAsRead} />
     </TutorShell>
   );
 }
-

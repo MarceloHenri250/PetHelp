@@ -177,6 +177,11 @@ router.post('/login', async (req, res, next) => {
       return;
     }
 
+    if (!user.is_active) {
+      res.status(403).json({ message: 'Account is inactive' });
+      return;
+    }
+
     const match = await bcrypt.compare(String(password), user.password_hash);
     if (!match) {
       res.status(401).json({ message: 'Invalid credentials' });
@@ -274,6 +279,5 @@ router.post('/password-recovery/confirm', async (req, res, next) => {
 });
 
 export default router;
-
 
 

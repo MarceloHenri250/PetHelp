@@ -376,7 +376,7 @@ export default function ClinicAgendaScreen() {
                       <div>
                         <h3 className="text-lg text-foreground">Horários cadastrados</h3>
                         <p className="text-sm text-muted-foreground">
-                          {currentSchedule.slots.length} intervalo{currentSchedule.slots.length === 1 ? '' : 's'} disponível{currentSchedule.slots.length === 1 ? '' : 'eis'}
+                          {currentSchedule.slots.length} intervalo{currentSchedule.slots.length === 1 ? '' : 's'} disponíve{currentSchedule.slots.length === 1 ? 'l' : 'is'}
                         </p>
                       </div>
                       <Clock3 className="h-5 w-5 text-primary" />

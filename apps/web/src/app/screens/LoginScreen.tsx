@@ -103,7 +103,14 @@ export default function LoginScreen() {
       navigate(getDashboardRouteForUserType(resolvedUserType), { replace: true });
     } catch (error) {
       console.error('Falha ao realizar login:', error);
-      setLoginMessage({ type: 'error', text: 'Nao foi possivel entrar. Confira seu e-mail e senha.' });
+      const raw = error instanceof Error ? error.message : '';
+      let text = 'E-mail ou senha incorretos. Confira e tente novamente.';
+      if (/servidor|failed to fetch/i.test(raw)) {
+        text = 'Não foi possível falar com o servidor. Verifique se o backend está rodando.';
+      } else if (/inactive|inativ/i.test(raw)) {
+        text = 'Esta conta está inativa.';
+      }
+      setLoginMessage({ type: 'error', text });
     } finally {
       setLoading(false);
     }

@@ -106,10 +106,9 @@ export default function AppointmentsScreen() {
   const [reviewComment, setReviewComment] = useState('');
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  const userAppointments = useMemo(
-    () => (user?.userType === 'owner' ? appointments.filter((a) => a.ownerId === user.id) : appointments),
-    [appointments, user?.id, user?.userType]
-  );
+  // The /api/appointments/me endpoint already scopes results to the current user
+  // (by tutor/clinic/veterinarian profile), so no extra client-side owner filter is needed.
+  const userAppointments = appointments;
   const scheduled = userAppointments.filter((a) => a.status === 'scheduled');
   const completed = userAppointments.filter((a) => a.status === 'completed');
   const activeReviewAppointment = reviewAppointmentId ? userAppointments.find((appointment) => appointment.id === reviewAppointmentId) ?? null : null;
@@ -315,11 +314,8 @@ export default function AppointmentsScreen() {
       return;
     }
 
+    // Vet-Pass é opcional no agendamento.
     const vetPass = vetPassCode.trim().toUpperCase();
-    if (!vetPass) {
-      setFeedback({ type: 'error', message: 'Informe o código VetPass do pet.' });
-      return;
-    }
 
     if (availability.loading) {
       setFeedback({ type: 'error', message: 'Aguarde a verificação de disponibilidade.' });
@@ -458,16 +454,17 @@ export default function AppointmentsScreen() {
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-foreground">Código VetPass</label>
+                  <label className="mb-2 block text-foreground">Código VetPass <span className="text-muted-foreground">(opcional)</span></label>
                   <div className="relative">
                     <Lock className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
                     <input
                       value={vetPassCode}
                       onChange={(event) => setVetPassCode(event.target.value.toUpperCase())}
-                      placeholder="VET-..."
+                      placeholder="VET-... (deixe em branco se não tiver)"
                       className="w-full rounded-[18px] border border-border bg-[#efe9de] py-3 pl-12 pr-4 uppercase tracking-wider text-foreground outline-none transition-colors focus:border-primary"
                     />
                   </div>
+                  <p className="mt-1 text-xs text-muted-foreground">Só é necessário se você quiser liberar exames anexados ao veterinário.</p>
                 </div>
               </div>
 
@@ -582,10 +579,16 @@ export default function AppointmentsScreen() {
         <section className="rounded-[34px] border border-border/70 bg-card p-6 shadow-[0_24px_60px_-36px_rgba(127,162,106,0.18)] sm:p-8">
           <div className="mb-4 flex items-center justify-between gap-3">
             <h2 className="text-2xl font-medium text-foreground">Agendadas</h2>
-            <span className="text-sm text-muted-foreground">{scheduled.length} consultas</span>
+            <span className="text-sm text-muted-foreground">{scheduled.length} consulta{scheduled.length === 1 ? '' : 's'}</span>
           </div>
           {scheduled.length === 0 ? (
-            <p className="py-8 text-center text-muted-foreground">Nenhuma consulta agendada</p>
+            <div className="flex flex-col items-center gap-2 py-8 text-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary"><Calendar className="h-6 w-6" /></div>
+              <p className="text-muted-foreground">Nenhuma consulta agendada</p>
+              {user?.userType === 'owner' && (
+                <p className="text-sm text-muted-foreground">Clique em <span className="font-medium text-foreground">“Nova Consulta”</span> para marcar uma.</p>
+              )}
+            </div>
           ) : (
             <div className="space-y-3">
               {scheduled.map((appointment) => (
@@ -609,7 +612,7 @@ export default function AppointmentsScreen() {
         <section className="rounded-[34px] border border-border/70 bg-card p-6 shadow-[0_24px_60px_-36px_rgba(127,162,106,0.18)] sm:p-8">
           <div className="mb-4 flex items-center justify-between gap-3">
             <h2 className="text-2xl font-medium text-foreground">Concluídas</h2>
-            <span className="text-sm text-muted-foreground">{completed.length} consultas</span>
+            <span className="text-sm text-muted-foreground">{completed.length} consulta{completed.length === 1 ? '' : 's'}</span>
           </div>
           {completed.length === 0 ? (
             <p className="py-8 text-center text-muted-foreground">Nenhuma consulta concluída</p>

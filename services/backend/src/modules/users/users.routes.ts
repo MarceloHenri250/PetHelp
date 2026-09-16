@@ -341,7 +341,7 @@ async function deactivateCurrentUserHandler(req: AuthRequest, res: any, next: an
     }
 
     await connection.beginTransaction();
-    await connection.execute('UPDATE users SET is_active = 0 WHERE id = ?', [userId]);
+    await connection.execute('UPDATE users SET is_active = FALSE WHERE id = ?', [userId]);
     await connection.commit();
     res.status(204).send();
   } catch (err) {

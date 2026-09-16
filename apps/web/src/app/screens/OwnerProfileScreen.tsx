@@ -1,6 +1,6 @@
 ﻿import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { ChevronRight, IdCard, Languages, Mail, Phone, Save, Settings, ShieldAlert, Trash2, User } from 'lucide-react';
+import { IdCard, Mail, Phone, Save, Settings, ShieldAlert, Trash2, User } from 'lucide-react';
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../components/ui/alert-dialog';
 import { useSession } from '../context/SessionContext';
 import { TutorShell } from '../components/layout/TutorShell';
@@ -164,36 +164,6 @@ export default function OwnerProfileScreen() {
               </button>
             </div>
           </form>
-        </section>
-
-        <section className="rounded-[34px] border border-border/70 bg-card p-6 shadow-[0_24px_60px_-36px_rgba(127,162,106,0.18)] sm:p-8">
-          <div className="mb-6 flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-              <Languages className="h-7 w-7" />
-            </div>
-            <div>
-              <h2 className="text-3xl font-medium text-foreground">Idioma do sistema</h2>
-              <p className="text-muted-foreground">A personalização de idioma será liberada em breve.</p>
-            </div>
-          </div>
-
-          <div className="rounded-[28px] border border-dashed border-border bg-muted/25 p-5">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="mb-1 text-foreground">Português (Brasil)</p>
-                <p className="text-sm text-muted-foreground">Em breve você poderá alternar entre os idiomas disponíveis.</p>
-              </div>
-              <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs text-primary">Em breve</span>
-            </div>
-            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-              {['Português (Brasil)', 'English', 'Espanhol'].map((language, index) => (
-                <button key={language} type="button" disabled className={`flex cursor-not-allowed items-center justify-between rounded-[18px] border px-4 py-3 text-left transition-colors ${index === 0 ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-background text-muted-foreground'} opacity-90`}>
-                  <span>{language}</span>
-                  {index === 0 ? <ChevronRight className="h-4 w-4" /> : null}
-                </button>
-              ))}
-            </div>
-          </div>
         </section>
 
         <section className="rounded-[34px] border border-red-200 bg-red-50 p-6 shadow-[0_24px_60px_-36px_rgba(127,162,106,0.18)] sm:p-8">

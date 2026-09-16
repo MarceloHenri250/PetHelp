@@ -1,5 +1,5 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, Mail, ShieldCheck, Stethoscope, Trash2, Users } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { CheckCircle2, Mail, ShieldCheck, Trash2, XCircle } from 'lucide-react';
 import { ClinicShell } from '../components/layout/ClinicShell';
 import { useSession } from '../context/SessionContext';
 import { getApiBase, getAuthHeaders } from '../context/shared';
@@ -51,7 +51,7 @@ export default function ManageVeterinariansScreen() {
           setLinks((data ?? []) as ClinicLink[]);
         }
       } catch (error) {
-        console.error('Falha ao carregar vÃ­nculos da clÃ­nica:', error);
+        console.error('Falha ao carregar vínculos da clínica:', error);
         if (!cancelled) setLinks([]);
       }
     };
@@ -63,9 +63,17 @@ export default function ManageVeterinariansScreen() {
     };
   }, [API_BASE]);
 
-  const clinicName = user?.clinicName || user?.name || 'ClÃ­nica';
+  const clinicName = user?.clinicName || user?.name || 'Clínica';
   const approvedLinks = useMemo(() => links.filter((link) => link.status === 'approved'), [links]);
   const pendingLinks = useMemo(() => links.filter((link) => link.status === 'pending'), [links]);
+  const incomingRequests = useMemo(
+    () => pendingLinks.filter((link) => link.requestedBy === 'veterinarian'),
+    [pendingLinks]
+  );
+  const sentInvites = useMemo(
+    () => pendingLinks.filter((link) => link.requestedBy === 'clinic'),
+    [pendingLinks]
+  );
 
   const handleInvite = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -73,7 +81,7 @@ export default function ManageVeterinariansScreen() {
 
     const email = inviteEmail.trim().toLowerCase();
     if (!email) {
-      setFeedback({ type: 'error', message: 'Informe o e-mail do veterinÃ¡rio.' });
+      setFeedback({ type: 'error', message: 'Informe o e-mail do veterinário.' });
       return;
     }
 
@@ -102,8 +110,8 @@ export default function ManageVeterinariansScreen() {
       setFeedback({ type: 'success', message: 'Convite enviado com sucesso.' });
       setTab('pending');
     } catch (error) {
-      console.error('Falha ao convidar veterinÃ¡rio:', error);
-      setFeedback({ type: 'error', message: 'NÃ£o foi possÃ­vel enviar o convite.' });
+      console.error('Falha ao convidar veterinário:', error);
+      setFeedback({ type: 'error', message: 'Não foi possível enviar o convite.' });
     } finally {
       setSavingInvite(false);
     }
@@ -131,10 +139,10 @@ export default function ManageVeterinariansScreen() {
         setLinks((prev) => [data as ClinicLink, ...prev.filter((link) => link.id !== data.id)]);
       }
 
-      setFeedback({ type: 'success', message: nextStatus === 'approved' ? 'VÃ­nculo aprovado.' : 'VÃ­nculo recusado.' });
+      setFeedback({ type: 'success', message: nextStatus === 'approved' ? 'Vínculo aprovado.' : 'Vínculo recusado.' });
     } catch (error) {
-      console.error(`Falha ao ${nextStatus === 'approved' ? 'aprovar' : 'recusar'} vÃ­nculo:`, error);
-      setFeedback({ type: 'error', message: 'NÃ£o foi possÃ­vel atualizar o vÃ­nculo.' });
+      console.error(`Falha ao ${nextStatus === 'approved' ? 'aprovar' : 'recusar'} vínculo:`, error);
+      setFeedback({ type: 'error', message: 'Não foi possível atualizar o vínculo.' });
     } finally {
       setSavingLinkId(null);
     }
@@ -158,10 +166,10 @@ export default function ManageVeterinariansScreen() {
       }
 
       setLinks((prev) => prev.filter((link) => link.id !== linkId));
-      setFeedback({ type: 'success', message: 'VÃ­nculo removido.' });
+      setFeedback({ type: 'success', message: 'Vínculo removido.' });
     } catch (error) {
-      console.error('Falha ao remover vÃ­nculo:', error);
-      setFeedback({ type: 'error', message: 'NÃ£o foi possÃ­vel remover o vÃ­nculo.' });
+      console.error('Falha ao remover vínculo:', error);
+      setFeedback({ type: 'error', message: 'Não foi possível remover o vínculo.' });
     } finally {
       setSavingLinkId(null);
     }
@@ -170,8 +178,8 @@ export default function ManageVeterinariansScreen() {
   return (
     <ClinicShell
       active="veterinarians"
-      title="Gerenciar veterinÃ¡rios"
-      description="Convide profissionais, aprove vÃ­nculos pendentes e remova conexÃµes desnecessÃ¡rias."
+      title="Gerenciar veterinários"
+      description="Convide profissionais, aprove vínculos pendentes e remova conexões desnecessárias."
       actions={
         <div className="rounded-full border border-border bg-card px-4 py-2 text-sm text-foreground">
           {approvedLinks.length} ativo{approvedLinks.length === 1 ? '' : 's'}
@@ -193,14 +201,14 @@ export default function ManageVeterinariansScreen() {
 
         <section className="grid gap-4 md:grid-cols-3">
           <div className="rounded-[28px] border border-border/70 bg-card p-6 shadow-[0_24px_60px_-36px_rgba(127,162,106,0.18)]">
-            <p className="text-sm text-muted-foreground">ClÃ­nica</p>
+            <p className="text-sm text-muted-foreground">Clínica</p>
             <p className="mt-2 text-2xl font-medium text-foreground">{clinicName}</p>
-            <p className="mt-2 text-sm text-muted-foreground">Fluxo de vÃ­nculos e gestÃ£o de equipe vinculado ao painel da clÃ­nica.</p>
+            <p className="mt-2 text-sm text-muted-foreground">Fluxo de vínculos e gestão de equipe vinculado ao painel da clínica.</p>
           </div>
           <div className="rounded-[28px] border border-border/70 bg-card p-6 shadow-[0_24px_60px_-36px_rgba(127,162,106,0.18)]">
             <p className="text-sm text-muted-foreground">Ativos</p>
             <p className="mt-2 text-3xl font-medium text-foreground">{approvedLinks.length}</p>
-            <p className="mt-2 text-sm text-muted-foreground">VeterinÃ¡rios jÃ¡ liberados.</p>
+            <p className="mt-2 text-sm text-muted-foreground">Veterinários já liberados.</p>
           </div>
           <div className="rounded-[28px] border border-border/70 bg-card p-6 shadow-[0_24px_60px_-36px_rgba(127,162,106,0.18)]">
             <p className="text-sm text-muted-foreground">Pendentes</p>
@@ -233,7 +241,7 @@ export default function ManageVeterinariansScreen() {
               }`}
             >
               <p className="text-sm font-medium">Pendentes</p>
-              <p className="mt-1 text-xs opacity-80">Aprovar ou recusar solicitaÃ§Ãµes.</p>
+              <p className="mt-1 text-xs opacity-80">Aprovar ou recusar solicitações.</p>
             </button>
             <button
               type="button"
@@ -254,15 +262,15 @@ export default function ManageVeterinariansScreen() {
           <section className="rounded-[32px] border border-border/70 bg-card p-6 shadow-[0_24px_60px_-36px_rgba(127,162,106,0.18)] sm:p-8">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-sm text-muted-foreground">Novo vÃ­nculo</p>
-                <h2 className="text-2xl font-medium text-foreground">Convidar veterinÃ¡rio</h2>
+                <p className="text-sm text-muted-foreground">Novo vínculo</p>
+                <h2 className="text-2xl font-medium text-foreground">Convidar veterinário</h2>
               </div>
               <Mail className="h-6 w-6 text-primary" />
             </div>
 
             <form onSubmit={handleInvite} className="mt-6 flex flex-col gap-4 lg:flex-row lg:items-end">
               <div className="flex-1">
-                <label className="mb-2 block text-sm text-foreground">E-mail do veterinÃ¡rio</label>
+                <label className="mb-2 block text-sm text-foreground">E-mail do veterinário</label>
                 <div className="relative">
                   <Mail className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
                   <input
@@ -290,17 +298,17 @@ export default function ManageVeterinariansScreen() {
           <section className="space-y-4">
             {pendingLinks.length === 0 ? (
               <div className="rounded-[28px] border border-dashed border-border bg-card p-6 text-sm text-muted-foreground">
-                Nenhuma solicitaÃ§Ã£o pendente no momento.
+                Nenhuma solicitação pendente no momento.
               </div>
             ) : null}
 
-            {veterinarianPendingLinks.length > 0 ? (
+            {incomingRequests.length > 0 ? (
               <div className="space-y-3 rounded-[28px] border border-border/70 bg-card p-5 shadow-[0_24px_60px_-36px_rgba(127,162,106,0.18)]">
                 <div>
-                  <p className="text-sm text-muted-foreground">SolicitaÃ§Ãµes recebidas</p>
-                  <h3 className="text-xl text-foreground">Aguardar veterinÃ¡rios respondendo ao convite da clÃ­nica</h3>
+                  <p className="text-sm text-muted-foreground">Solicitações recebidas</p>
+                  <h3 className="text-xl text-foreground">Veterinários que pediram vínculo com a clínica</h3>
                 </div>
-                {veterinarianPendingLinks.map((link) => (
+                {incomingRequests.map((link) => (
                   <div key={link.id} className="rounded-[24px] border border-border bg-background p-4">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                       <div>
@@ -310,31 +318,42 @@ export default function ManageVeterinariansScreen() {
                         </div>
                         <p className="mt-1 text-sm text-muted-foreground">{link.veterinarianEmail}</p>
                         <p className="text-xs text-muted-foreground">CRMV {link.veterinarianCrmv}/{link.veterinarianCrmvUf}</p>
-                        <p className="mt-1 text-xs text-muted-foreground">Convite enviado pela clÃ­nica. O veterinÃ¡rio precisa aceitar.</p>
+                        <p className="mt-1 text-xs text-muted-foreground">Solicitação enviada pelo veterinário. Aprove para liberar o acesso.</p>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => void handleRemoveLink(link.id)}
-                        disabled={savingLinkId === link.id}
-                        className="inline-flex items-center gap-2 rounded-[18px] border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        Cancelar convite
-                      </button>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => void handleUpdateLinkStatus(link.id, 'approved')}
+                          disabled={savingLinkId === link.id}
+                          className="inline-flex items-center gap-2 rounded-[18px] border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-700 transition-colors hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          <CheckCircle2 className="h-4 w-4" />
+                          Aprovar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void handleUpdateLinkStatus(link.id, 'rejected')}
+                          disabled={savingLinkId === link.id}
+                          className="inline-flex items-center gap-2 rounded-[18px] border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          <XCircle className="h-4 w-4" />
+                          Recusar
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
             ) : null}
 
-            {clinicPendingLinks.length > 0 ? (
+            {sentInvites.length > 0 ? (
               <div className="space-y-3 rounded-[28px] border border-border/70 bg-card p-5 shadow-[0_24px_60px_-36px_rgba(127,162,106,0.18)]">
                 <div>
-                  <p className="text-sm text-muted-foreground">Solicitações aguardando aprovação</p>
-                  <h3 className="text-xl text-foreground">Veterinários esperando retorno da clínica</h3>
+                  <p className="text-sm text-muted-foreground">Convites enviados</p>
+                  <h3 className="text-xl text-foreground">Veterinários que ainda não responderam ao convite</h3>
                 </div>
-                {clinicPendingLinks.map((link) => (
+                {sentInvites.map((link) => (
                   <div key={link.id} className="rounded-[24px] border border-border bg-background p-4">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                       <div>
@@ -344,7 +363,7 @@ export default function ManageVeterinariansScreen() {
                         </div>
                         <p className="mt-1 text-sm text-muted-foreground">{link.veterinarianEmail}</p>
                         <p className="text-xs text-muted-foreground">CRMV {link.veterinarianCrmv}/{link.veterinarianCrmvUf}</p>
-                        <p className="mt-1 text-xs text-muted-foreground">Solicitação criada pela clínica. Aguardando o veterinário responder.</p>
+                        <p className="mt-1 text-xs text-muted-foreground">Convite enviado pela clínica. O veterinário precisa aceitar.</p>
                       </div>
 
                       <button
@@ -368,7 +387,7 @@ export default function ManageVeterinariansScreen() {
           <section className="space-y-3">
             {approvedLinks.length === 0 ? (
               <div className="rounded-[28px] border border-dashed border-border bg-card p-6 text-sm text-muted-foreground">
-                Nenhum veterinÃ¡rio ativo ainda.
+                Nenhum veterinário ativo ainda.
               </div>
             ) : (
               approvedLinks.map((link) => (
@@ -402,6 +421,3 @@ export default function ManageVeterinariansScreen() {
     </ClinicShell>
   );
 }
-
-
-

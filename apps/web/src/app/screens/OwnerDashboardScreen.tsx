@@ -7,7 +7,7 @@ import { TutorShell } from '../components/layout/TutorShell';
 
 export default function OwnerDashboardScreen() {
   const navigate = useNavigate();
-  const { currentPet, pets, setCurrentPet } = usePets();
+  const { currentPet, pets, setCurrentPet, loading } = usePets();
   useDashboardBackLogout();
 
   useEffect(() => {
@@ -15,6 +15,18 @@ export default function OwnerDashboardScreen() {
       setCurrentPet(pets[0]);
     }
   }, [currentPet, pets, setCurrentPet]);
+
+  if (loading && pets.length === 0) {
+    return (
+      <TutorShell active="home" title="Meus Pets" description="Gerencie a saúde dos seus companheiros.">
+        <div className="mx-auto max-w-3xl space-y-4">
+          <div className="h-40 animate-pulse rounded-[34px] border border-border/70 bg-card" />
+          <div className="h-24 animate-pulse rounded-[28px] border border-border/70 bg-card" />
+          <p className="text-center text-sm text-muted-foreground">Carregando seus pets…</p>
+        </div>
+      </TutorShell>
+    );
+  }
 
   if (pets.length === 0) {
     return (

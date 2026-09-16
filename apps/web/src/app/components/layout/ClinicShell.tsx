@@ -98,6 +98,7 @@ export function ClinicShell({ active, title, description, actions, children }: C
             <div className="hidden text-right md:block">
               <p className="text-sm text-muted-foreground">Olá, {clinicName}</p>
             </div>
+            <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">Clínica</span>
             <ThemeToggle />
             <button
               type="button"

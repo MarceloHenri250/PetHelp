@@ -211,7 +211,7 @@ export default function ClinicDashboardScreen() {
                   </div>
                   <RatingStars value={averageRating} />
                 </div>
-                <p className="mt-3 text-sm text-muted-foreground">{clinicReviews.length} avaliação{clinicReviews.length === 1 ? '' : 'ões'} registradas</p>
+                <p className="mt-3 text-sm text-muted-foreground">{clinicReviews.length} avaliaç{clinicReviews.length === 1 ? 'ão' : 'ões'} registrada{clinicReviews.length === 1 ? '' : 's'}</p>
                 {recentReviews[0] ? (
                   <div className="mt-4 rounded-[22px] border border-border bg-muted/25 p-4">
                     <p className="text-sm text-foreground">{recentReviews[0].tutorName}</p>

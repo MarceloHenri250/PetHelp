@@ -88,11 +88,20 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [API_BASE]);
 
   const login = async (email: string, password: string, userType: UserType) => {
-    const resp = await fetch(`${API_BASE}/api/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
+    // Descarta qualquer sessão anterior antes de tentar, para nunca misturar contas.
+    localStorage.removeItem('token');
+
+    let resp: Response;
+    try {
+      resp = await fetch(`${API_BASE}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+    } catch {
+      // fetch só lança quando não conseguiu falar com o servidor (offline/CORS).
+      throw new Error('Não foi possível falar com o servidor. Verifique se o backend está rodando.');
+    }
 
     if (!resp.ok) {
       throw new Error((await resp.json()).message ?? 'Login failed');
@@ -243,7 +252,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('token');
+    // Reset completo: apaga qualquer sessão/estado guardado no navegador para evitar
+    // "login embolado" ao trocar de conta, e recarrega numa tela limpa.
+    try {
+      localStorage.clear();
+    } catch {
+      localStorage.removeItem('token');
+    }
+    if (typeof window !== 'undefined') {
+      window.location.assign('/');
+    }
   };
 
   const deactivateCurrentUserAccount = async () => {

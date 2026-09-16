@@ -3,9 +3,7 @@ import { useNavigate } from 'react-router';
 import {
   ArrowLeft,
   CheckCircle2,
-  ChevronRight,
   IdCard,
-  Languages,
   Link2,
   Mail,
   Phone,
@@ -403,48 +401,6 @@ export default function VeterinarianSettingsScreen() {
         </section>
 
         <section className="mt-6 rounded-[28px] border border-border bg-card p-8 shadow-lg">
-          <div className="mb-6 flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
-              <Languages className="h-7 w-7 text-primary" />
-            </div>
-            <div>
-              <h2 className="text-2xl text-foreground">Idioma do sistema</h2>
-              <p className="text-muted-foreground">A personalização de idioma será liberada em breve.</p>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-dashed border-border bg-muted/40 p-5">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="mb-1 text-foreground">Português (Brasil)</p>
-                <p className="text-sm text-muted-foreground">Em breve você poderá alternar entre os idiomas disponíveis.</p>
-              </div>
-              <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs text-primary">
-                Em breve
-              </span>
-            </div>
-
-            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-              {['Português (Brasil)', 'English', 'Espanhol'].map((language, index) => (
-                <button
-                  key={language}
-                  type="button"
-                  disabled
-                  className={`flex cursor-not-allowed items-center justify-between rounded-2xl border px-4 py-3 text-left opacity-90 transition-colors ${
-                    index === 0
-                      ? 'border-primary bg-primary/10 text-primary'
-                      : 'border-border bg-background text-muted-foreground'
-                  }`}
-                >
-                  <span>{language}</span>
-                  {index === 0 ? <ChevronRight className="h-4 w-4" /> : null}
-                </button>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="mt-6 rounded-[28px] border border-border bg-card p-8 shadow-lg">
           <div className="mb-6 flex items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
@@ -546,7 +502,6 @@ export default function VeterinarianSettingsScreen() {
     </VeterinarianShell>
   );
 }
-
 
 
 

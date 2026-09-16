@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useSession } from './SessionContext';
 import { getApiBase, getAuthHeaders, type Appointment, type Notification } from './shared';
 
@@ -56,6 +56,7 @@ export function InteractionProvider({ children }: { children: ReactNode }) {
   const { user, authReady } = useSession();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const knownNotificationIds = useRef(new Set<string>());
   const API_BASE = getApiBase();
 
   useEffect(() => {
@@ -63,12 +64,14 @@ export function InteractionProvider({ children }: { children: ReactNode }) {
     if (!user) {
       setAppointments([]);
       setNotifications([]);
+      knownNotificationIds.current = new Set();
       return;
     }
 
+    knownNotificationIds.current = new Set();
     let cancelled = false;
 
-    const load = async () => {
+    const load = async (announceNew = false) => {
       try {
         const [appointmentsResp, notificationsResp] = await Promise.all([
           fetch(`${API_BASE}/api/appointments/me`, { headers: getAuthHeaders() }),
@@ -86,7 +89,17 @@ export function InteractionProvider({ children }: { children: ReactNode }) {
 
         if (notificationsResp.ok) {
           const { data } = await notificationsResp.json();
-          setNotifications((data ?? []).map(toUiNotification));
+          const nextNotifications = (data ?? []).map(toUiNotification) as Notification[];
+          const newUnread = nextNotifications.filter((item) => !item.read && !knownNotificationIds.current.has(item.id));
+          const hasInitialLoad = knownNotificationIds.current.size > 0;
+          knownNotificationIds.current = new Set(nextNotifications.map((item) => item.id));
+          setNotifications(nextNotifications);
+
+          if (announceNew && hasInitialLoad && typeof window !== 'undefined' && window.Notification?.permission === 'granted') {
+            newUnread.forEach((notification) => {
+              new window.Notification(notification.title, { body: notification.message, tag: notification.id });
+            });
+          }
         } else {
           setNotifications([]);
         }
@@ -100,9 +113,11 @@ export function InteractionProvider({ children }: { children: ReactNode }) {
     };
 
     void load();
+    const pollId = window.setInterval(() => void load(true), 60_000);
 
     return () => {
       cancelled = true;
+      window.clearInterval(pollId);
     };
   }, [API_BASE, authReady, user?.id]);
 
@@ -131,7 +146,6 @@ export function InteractionProvider({ children }: { children: ReactNode }) {
         ...getAuthHeaders(),
       },
       body: JSON.stringify({
-        userId: created.ownerId,
         petId: created.petId,
         appointmentId: created.id,
         sourceKey: `appointment-created:${created.id}`,
