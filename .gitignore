@@ -24,3 +24,7 @@ Thumbs.db
 
 # IDE files
 /Guias/
+
+# Use pnpm only
+package-lock.json
+yarn.lock

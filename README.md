@@ -11,8 +11,8 @@ Monorepo do PetHelp, com frontend web em React e backend em Express + TypeScript
 ## Requisitos
 
 - Node.js 20+ recomendado
-- pnpm 11+
-- PostgreSQL 18 para o backend (porta 5433 na instalação local)
+- pnpm 11+ (o repo usa apenas pnpm; não versione `package-lock.json`)
+- PostgreSQL 14+ para o backend
 
 ## Instalacao
 
@@ -71,11 +71,25 @@ pnpm start:backend
 
 ### Banco de dados
 
-Configure `services/backend/.env` com as variáveis `POSTGRES_*`. Para recriar o banco de desenvolvimento e aplicar o schema:
+O backend usa **PostgreSQL** via [`pg`](https://node-postgres.com/) e migrações
+versionadas com [`node-pg-migrate`](https://salsita.github.io/node-pg-migrate/).
 
-```bash
-npm.cmd --prefix services/backend run db:reset -- --yes
-```
+1. Copie `services/backend/.env.example` para `services/backend/.env` e ajuste as
+   variáveis `POSTGRES_*` / `DATABASE_URL`.
+2. Aplique as migrações em um banco já criado:
+
+   ```bash
+   pnpm db:migrate
+   ```
+
+3. Ou recrie o banco de desenvolvimento do zero (DROP + CREATE + migrações):
+
+   ```bash
+   pnpm --dir services/backend run db:reset -- --yes
+   ```
+
+A implementação MySQL anterior está congelada em
+`services/backend/legacy-mysql/` para eventual rollback.
 
 ### Verificacao de tipos
 
@@ -87,10 +101,19 @@ pnpm typecheck:backend
 
 ```text
 apps/
-  web/
-  mobile/
+  web/                 app React + Vite (@pet-help/web)
+    src/
+      components/      common/ (primitivos), layout/, ui/ (shadcn), figma/
+      screens/         auth/, tutor/, vet/, clinic/
+      hooks/  lib/  styles/
+  mobile/              planejado, ainda nao inicializado
 services/
-  backend/
+  backend/             API Express + PostgreSQL (@pethelp/backend)
+    src/
+      config/  db/  middlewares/  routes/
+      modules/         health, auth, users, pets, appointments, ...
+    migrations/        node-pg-migrate
+    legacy-mysql/      snapshot MySQL (rollback)
 ```
 
 ## Observacoes

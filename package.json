@@ -4,12 +4,16 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "dev:web": "npm run dev --prefix apps/web",
-    "build:web": "npm run build --prefix apps/web",
+    "dev:web": "pnpm --dir apps/web dev",
+    "build:web": "pnpm --dir apps/web build",
+    "typecheck:web": "pnpm --dir apps/web typecheck",
     "dev:backend": "pnpm --dir services/backend dev",
     "build:backend": "pnpm --dir services/backend build",
     "start:backend": "pnpm --dir services/backend start",
-    "typecheck:backend": "pnpm --dir services/backend typecheck"
+    "typecheck:backend": "pnpm --dir services/backend typecheck",
+    "test:backend": "pnpm --dir services/backend test",
+    "db:reset": "pnpm --dir services/backend db:reset",
+    "db:migrate": "pnpm --dir services/backend migrate up"
   },
   "devDependencies": {},
   "packageManager": "pnpm@11.5.2+sha512.71c631e382066efc25625d5cf029075de07b61b37f6e27350fbd84b1bda5864c8c1967adc280776b45c30a715c0359a3be08fef42d5bb09e2b99029979692916"

@@ -1,6 +1,6 @@
 ﻿import { randomUUID } from 'node:crypto';
-import type { PoolConnection } from 'mysql2/promise';
-import type { RowDataPacket } from 'mysql2';
+import type { PoolConnection } from '../../db/types.js';
+import type { RowDataPacket } from '../../db/types.js';
 import { pool } from '../../db/index.js';
 
 export type UserType = 'tutor' | 'clinic' | 'veterinarian';

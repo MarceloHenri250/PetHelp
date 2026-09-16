@@ -1,16 +1,14 @@
-import { readFile } from 'node:fs/promises';
+import { spawnSync } from 'node:child_process';
 import { createInterface } from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
-import { fileURLToPath } from 'node:url';
-import mysql from 'mysql2/promise';
+import pg from 'pg';
 import { env } from '../config/env.js';
 
-const schemaPath = fileURLToPath(new URL('./schema.sql', import.meta.url));
-const databaseName = env.mysql.database;
+const databaseName = env.postgres.database;
 const forceReset = process.argv.includes('--yes') || process.argv.includes('-y');
 
 function quoteIdentifier(identifier: string) {
-  return `\`${identifier.replace(/`/g, '``')}\``;
+  return `"${identifier.replace(/"/g, '""')}"`;
 }
 
 async function confirmReset() {
@@ -40,34 +38,44 @@ async function confirmReset() {
 async function main() {
   await confirmReset();
 
-  const connection = await mysql.createConnection({
-    host: env.mysql.host,
-    port: env.mysql.port,
-    user: env.mysql.user,
-    password: env.mysql.password,
-    multipleStatements: true,
+  const client = new pg.Client({
+    host: env.postgres.host,
+    port: env.postgres.port,
+    user: env.postgres.user,
+    password: env.postgres.password,
+    database: 'postgres',
   });
+
+  await client.connect();
 
   const quotedDatabase = quoteIdentifier(databaseName);
 
   try {
     console.log(`Dropping database ${databaseName}...`);
-    await connection.query(`DROP DATABASE IF EXISTS ${quotedDatabase};`);
+    await client.query(
+      `SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1 AND pid <> pg_backend_pid()`,
+      [databaseName],
+    );
+    await client.query(`DROP DATABASE IF EXISTS ${quotedDatabase}`);
 
     console.log(`Creating database ${databaseName}...`);
-    await connection.query(
-      `CREATE DATABASE ${quotedDatabase} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`,
-    );
-
-    const schemaSql = await readFile(schemaPath, 'utf8');
-
-    console.log(`Applying schema from ${schemaPath}...`);
-    await connection.query(schemaSql);
-
-    console.log(`Database ${databaseName} reset successfully.`);
+    await client.query(`CREATE DATABASE ${quotedDatabase} ENCODING 'UTF8'`);
   } finally {
-    await connection.end();
+    await client.end();
   }
+
+  console.log('Applying migrations...');
+  const result = spawnSync('npx node-pg-migrate up --envPath .env', {
+    stdio: 'inherit',
+    shell: true,
+    env: { ...process.env, DATABASE_URL: env.databaseUrl },
+  });
+
+  if (result.status !== 0) {
+    throw new Error('Migrations failed.');
+  }
+
+  console.log(`Database ${databaseName} reset successfully.`);
 }
 
 main().catch((error: unknown) => {

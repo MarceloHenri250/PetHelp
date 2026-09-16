@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { Router } from 'express';
-import type { ResultSetHeader, RowDataPacket } from 'mysql2';
-import type { PoolConnection } from 'mysql2/promise';
+import type { PoolConnection, ResultSetHeader, RowDataPacket } from '../../db/types.js';
 import { pool } from '../../db/index.js';
 import type { AuthRequest } from '../../middlewares/auth.js';
 import { requireAuth } from '../../middlewares/auth.js';
@@ -238,7 +237,7 @@ petsRouter.get('/', async (req: AuthRequest, res, next) => {
     }
 
     if (!showInactive) {
-      conditions.push('is_active = 1');
+      conditions.push('is_active = true');
     }
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
@@ -562,7 +561,7 @@ petsRouter.delete('/:id', async (req: AuthRequest, res, next) => {
       return;
     }
 
-    await connection.execute<ResultSetHeader>('UPDATE pets SET is_active = 0 WHERE id = ?', [String(req.params.id)]);
+    await connection.execute<ResultSetHeader>('UPDATE pets SET is_active = false WHERE id = ?', [String(req.params.id)]);
     res.status(204).send();
   } catch (error) {
     next(error);

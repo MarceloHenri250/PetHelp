@@ -341,7 +341,7 @@ async function deactivateCurrentUserHandler(req: AuthRequest, res: any, next: an
     }
 
     await connection.beginTransaction();
-    await connection.execute('UPDATE users SET is_active = 0 WHERE id = ?', [userId]);
+    await connection.execute('UPDATE users SET is_active = false WHERE id = ?', [userId]);
     await connection.commit();
     res.status(204).send();
   } catch (err) {
@@ -367,7 +367,7 @@ async function deleteCurrentUserHandler(req: AuthRequest, res: any, next: any, u
     res.status(204).send();
   } catch (err: any) {
     await connection.rollback();
-    if (err?.code === 'ER_ROW_IS_REFERENCED_2') {
+    if (err?.code === 'ER_ROW_IS_REFERENCED_2' || err?.code === '23503') {
       res.status(409).json({
         message: 'Cannot delete account while it is referenced by other records',
       });

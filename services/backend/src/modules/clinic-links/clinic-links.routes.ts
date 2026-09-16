@@ -1,5 +1,5 @@
 ﻿import { Router } from 'express';
-import type { RowDataPacket } from 'mysql2';
+import type { RowDataPacket } from '../../db/types.js';
 import { pool } from '../../db/index.js';
 import type { AuthRequest } from '../../middlewares/auth.js';
 import { requireAuth } from '../../middlewares/auth.js';
@@ -219,7 +219,7 @@ router.post('/request', async (req: AuthRequest, res, next) => {
       await pool.execute(
         `
           INSERT INTO clinic_veterinarians (id, clinic_id, veterinarian_id, status, requested_by)
-          VALUES (UUID(), ?, ?, 'pending', ?)
+          VALUES (gen_random_uuid(), ?, ?, 'pending', ?)
         `,
         [clinicId, veterinarianId, requestedBy]
       );
