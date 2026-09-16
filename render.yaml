@@ -34,7 +34,6 @@ services:
   - type: web
     name: pethelp-web
     runtime: static
-    plan: free
     rootDir: apps/web
     buildCommand: npm install && npm run build
     staticPublishPath: dist
