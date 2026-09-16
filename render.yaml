@@ -14,7 +14,6 @@ services:
   - type: web
     name: pethelp-api
     runtime: node
-    plan: free
     rootDir: services/backend
     buildCommand: npm install && npm run build
     startCommand: npm run start
