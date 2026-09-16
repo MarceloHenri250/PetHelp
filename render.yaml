@@ -8,7 +8,6 @@
 databases:
   - name: pethelp-db
     databaseName: pethelp
-    plan: free
 
 services:
   # ---- API (backend Express + TypeScript) ----
